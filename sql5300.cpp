@@ -226,10 +226,14 @@ std::string convertCreateStatementInfo(const hsql::CreateStatement *stmt, std::s
 
     if (stmt->columns != NULL) {
         res += " (";
+        bool doComma = false;
         for (auto col_name:*stmt->columns) {
+            if (doComma)
+            {
+                res += ",";
+            }
             res += std::string("") + columnDefinitionToString(col_name);
-            res += ",";
-
+            doComma = true;
 
         }
         res += ")";
