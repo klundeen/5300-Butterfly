@@ -18,7 +18,8 @@ const char *HOME = "cpsc5300/data";
 const char *SQLSHELL = "sql5300.db";
 const unsigned int BLOCK_SZ = 4096;
 
-
+std::string convertExpressionToString(hsql::Expr *expr, std::string res);
+std::string convertSelectStatementInfo(const hsql::SelectStatement *stmt, std::string res);
 std::string convertOperatorExpressionToString(hsql::Expr *expr, std::string res) {
     if (expr == NULL) {
 
@@ -42,21 +43,26 @@ std::string convertOperatorExpressionToString(hsql::Expr *expr, std::string res)
             res += std::string(" ") + (char) expr->opType;
             break;
     }
-    res = convertOperatorExpressionToString(expr->expr, res);
+    res = convertExpressionToString(expr->expr, res);
     if (expr->expr2 != NULL) {
-        res = convertOperatorExpressionToString(expr->expr2, res);
+        res = convertExpressionToString(expr->expr2, res);
     }
+
     return res;
 }
 
 std::string convertExpressionToString(hsql::Expr *expr, std::string res) {
-
     switch (expr->type) {
         case hsql::kExprStar:
-            res += " * ";
+            res += "*";
             break;
         case hsql::kExprColumnRef:
-            res += std::string(" ") + expr->name + ",";
+            if(expr->table) {
+                res += std::string(" ") + expr->table+"."+expr->name + ",";
+            }
+            else{
+                res += std::string(" ") +expr->name + ",";
+            }
             break;
 
         case hsql::kExprLiteralFloat:
@@ -66,13 +72,8 @@ std::string convertExpressionToString(hsql::Expr *expr, std::string res) {
             res += std::string(" ") + (char) expr->ival + " ";
             break;
         case hsql::kExprLiteralString:
-            res += std::string(" ") + expr->name + " ";
+            res += std::string(" ") +expr->name + ",";
             break;
-            /*
-case hsql::kExprTableColumnRef:
-std::cout<<"kExprLiteralString";
-res+=std::string(" ")+expr->table+expr->name;
-             */
         case hsql::kExprFunctionRef:
             res += std::string(" ") + expr->name + " " + expr->expr->name + " ";
             break;
@@ -83,32 +84,39 @@ res+=std::string(" ")+expr->table+expr->name;
             fprintf(stderr, "Unrecognized expression type %d\n", expr->type);
             break;
     }
+
     if (expr->alias != NULL) {
-        res += std::string(".") + expr->alias + " ";
+        std::cout<<" inside alias ";
+        res += std::string(" ") +expr->alias+"."+expr->name + " ";
 
     }
-
     return res;
 }
 
 std::string convertTableRefInfoToString(hsql::TableRef *table, std::string res) {
+
     switch (table->type) {
         case hsql::kTableName:
-            res += std::string(" ") + (char *) table->name + " ";
+
+            res += std::string(" ") + table->name + ",";
+
+
             break;
 
         case hsql::kTableSelect:
-            // res=convertSelectStatementInfo(table->select, res);
+            res=convertSelectStatementInfo(table->select, res);
             break;
 
         case hsql::kTableJoin:
             res = convertTableRefInfoToString(table->join->left, res);
-            res += " LEFT ";
+            if(table->join->left){
+                res += " LEFT ";
+            }
+
             res += " JOIN ";
             res = convertTableRefInfoToString(table->join->right, res);
             res += " ON ";
             res = convertExpressionToString(table->join->condition, res);
-
             break;
 
         case hsql::kTableCrossProduct:
@@ -117,7 +125,7 @@ std::string convertTableRefInfoToString(hsql::TableRef *table, std::string res) 
             break;
     }
     if (table->alias != NULL) {
-        res += std::string("AS ") + (char *) table->alias + " ";
+        res += std::string("AS ") + table->alias + " ";
     }
 
     return res;
@@ -201,10 +209,10 @@ std::string execute(const hsql::SQLStatement *stmt, std::string res) {
 
     switch (stmt->type()) {
         case hsql::kStmtSelect:
-            res += convertSelectStatementInfo((const hsql::SelectStatement *) stmt, res);
+            res = convertSelectStatementInfo((const hsql::SelectStatement *) stmt, res);
             break;
         case hsql::kStmtCreate:
-            res += convertCreateStatementInfo((const hsql::CreateStatement *) stmt, res);
+            res = convertCreateStatementInfo((const hsql::CreateStatement *) stmt, res);
             break;
         default:
             break;
