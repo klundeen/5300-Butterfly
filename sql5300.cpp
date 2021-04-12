@@ -32,7 +32,7 @@ std::string convertOperatorExpressionToString(hsql::Expr *expr, std::string res)
 
         return res;
     }
-
+    res = convertExpressionToString(expr->expr, res);
     switch (expr->opType) {
         case hsql::Expr::SIMPLE_OP:
             res += std::string(" ") + (char) expr->opChar + " ";
@@ -50,7 +50,7 @@ std::string convertOperatorExpressionToString(hsql::Expr *expr, std::string res)
             res += std::string(" ") + (char) expr->opType;
             break;
     }
-    res = convertExpressionToString(expr->expr, res);
+
     if (expr->expr2 != NULL) {
         res = convertExpressionToString(expr->expr2, res);
     }
@@ -128,11 +128,20 @@ std::string convertTableRefInfoToString(hsql::TableRef *table, std::string res) 
 
         case hsql::kTableJoin:
             res = convertTableRefInfoToString(table->join->left, res);
-            if(table->join->left){
-                res += " LEFT ";
+            switch (table->join->type) {
+                case hsql::kJoinInner:
+                        res += " JOIN ";
+                        break;
+                case hsql::kJoinLeft:
+                        res += " LEFT JOIN ";
+                        break;
+                case hsql::kJoinRight:
+                        res += " RIGHT JOIN ";
+                        break;
+                        default:
+                        break;
             }
 
-            res += " JOIN ";
             res = convertTableRefInfoToString(table->join->right, res);
             res += " ON ";
             res = convertExpressionToString(table->join->condition, res);
@@ -144,7 +153,7 @@ std::string convertTableRefInfoToString(hsql::TableRef *table, std::string res) 
             break;
     }
     if (table->alias != NULL) {
-        res += std::string("AS ") + table->alias + " ";
+        res += std::string(" AS ") + table->alias + " ";
     }
 
     return res;
@@ -158,10 +167,14 @@ std::string convertTableRefInfoToString(hsql::TableRef *table, std::string res) 
  */
 std::string convertSelectStatementInfo(const hsql::SelectStatement *stmt, std::string res) {
     res += " SELECT";
-
+    bool doComma = false;
     for (hsql::Expr *expr : *stmt->selectList) {
+        if (doComma)
+        {
+            res += ",";
+        }
         res = convertExpressionToString(expr, res);
-        res += ",";
+        doComma = true;
     }
 
     res += " FROM";
@@ -268,12 +281,10 @@ std::string execute(const hsql::SQLStatement *stmt, std::string res) {
  * output. User can terminate the program by entering 'quit'.
  * @return 0 exit program
  */
-int main() {
-    //int argc, char *argv[]
+int main(int argc, char **argv) {
+
     // sql5300 shell;
 
-
-    // TODO: check if this is correct for creating th db?
     //Create DB environment
     /*
     std::cout << "Have you created a dir: ~/" << HOME  << "? (y/n) " << std::endl;
