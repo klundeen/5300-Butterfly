@@ -71,21 +71,21 @@ std::string convertExpressionToString(hsql::Expr *expr, std::string res) {
             break;
         case hsql::kExprColumnRef:
             if(expr->table) {
-                res += std::string(" ") + expr->table+"."+expr->name + ",";
+                res += std::string(" ") + expr->table+"."+expr->name;
             }
             else{
-                res += std::string(" ") +expr->name + ",";
+                res += std::string(" ") +expr->name;
             }
             break;
 
         case hsql::kExprLiteralFloat:
-            res += std::string(" ") + (char) expr->fval + " ";
+            res += std::string(" ") + std::to_string(expr->fval) + " ";
             break;
         case hsql::kExprLiteralInt:
-            res += std::string(" ") + (char) expr->ival + " ";
+            res += std::string(" ") + std::to_string(expr->ival) + " ";
             break;
         case hsql::kExprLiteralString:
-            res += std::string(" ") +expr->name + ",";
+            res += std::string(" ") +expr->name;
             break;
         case hsql::kExprFunctionRef:
             res += std::string(" ") + expr->name + " " + expr->expr->name + " ";
@@ -117,7 +117,7 @@ std::string convertTableRefInfoToString(hsql::TableRef *table, std::string res) 
     switch (table->type) {
         case hsql::kTableName:
 
-            res += std::string(" ") + table->name + ",";
+            res += std::string(" ") + table->name;
 
 
             break;
@@ -161,6 +161,7 @@ std::string convertSelectStatementInfo(const hsql::SelectStatement *stmt, std::s
 
     for (hsql::Expr *expr : *stmt->selectList) {
         res = convertExpressionToString(expr, res);
+        res += ",";
     }
 
     res += " FROM";
