@@ -20,6 +20,13 @@ const unsigned int BLOCK_SZ = 4096;
 
 std::string convertExpressionToString(hsql::Expr *expr, std::string res);
 std::string convertSelectStatementInfo(const hsql::SelectStatement *stmt, std::string res);
+
+/**
+ * Convert the hyrise OperatorExpression AST back into the equivalent SQL String
+ * @param expr expression to unparse
+ * @param res SQL String to add expression to
+ * @return formatted SQL String
+ */
 std::string convertOperatorExpressionToString(hsql::Expr *expr, std::string res) {
     if (expr == NULL) {
 
@@ -51,10 +58,16 @@ std::string convertOperatorExpressionToString(hsql::Expr *expr, std::string res)
     return res;
 }
 
+/**
+ * Convert the hyrise Expression AST back into the equivalent SQL String
+ * @param expr expression to unparse
+ * @param res SQL String to add expression to
+ * @return formatted SQL String
+ */
 std::string convertExpressionToString(hsql::Expr *expr, std::string res) {
     switch (expr->type) {
         case hsql::kExprStar:
-            res += "*";
+            res += " *";
             break;
         case hsql::kExprColumnRef:
             if(expr->table) {
@@ -93,6 +106,12 @@ std::string convertExpressionToString(hsql::Expr *expr, std::string res) {
     return res;
 }
 
+/**
+ * Convert the hyrise TableRefInfo AST back into the equivalent SQL String
+ * @param table hyrise table pointer
+ * @param res SQL String to add expression to
+ * @return formatted SQL String
+ */
 std::string convertTableRefInfoToString(hsql::TableRef *table, std::string res) {
 
     switch (table->type) {
@@ -131,6 +150,12 @@ std::string convertTableRefInfoToString(hsql::TableRef *table, std::string res) 
     return res;
 }
 
+/**
+ * Convert the hyrise SelectStatement AST back into the equivalent SQL
+ * @param stmt select statement to unparse
+ * @param res SQL String to add expression to
+ * @return formatted SQL String
+ */
 std::string convertSelectStatementInfo(const hsql::SelectStatement *stmt, std::string res) {
     res += " SELECT";
 
@@ -174,7 +199,12 @@ std::string columnDefinitionToString(const hsql::ColumnDefinition *col) {
     return ret;
 }
 
-
+/**
+ * Convert the hyrise CreateStatement AST back into the equivalent SQL
+ * @param stmt create statement to unparse
+ * @param res SQL String to add expression to
+ * @return formatted SQL String
+ */
 std::string convertCreateStatementInfo(const hsql::CreateStatement *stmt, std::string res) {
     res += "CREATE TABLE ";
     res += std::string("") + stmt->tableName;
@@ -195,10 +225,16 @@ std::string convertCreateStatementInfo(const hsql::CreateStatement *stmt, std::s
     return res;
 }
 
+/**
+ * Convert the hyrise SQLStatement AST back into the equivalent SQL
+ * @param stmt SQL statement to unparse
+ * @param res SQL String to add expression to
+ * @return formatted SQL String
+ */
 std::string execute(const hsql::SQLStatement *stmt, std::string res) {
 
     // Test
-    std::cout << "\nGot to execute\n" << std::endl;
+    // std::cout << "\nGot to execute\n" << std::endl;
     // printf("Parsed successfully!\n");
     // printf("Number of statements: %lu\n", result->size());
 
@@ -225,8 +261,14 @@ std::string execute(const hsql::SQLStatement *stmt, std::string res) {
 
 }
 
-int main(int argc, char *argv[]) {
-
+/**
+ * Main entry point for the program. Creates a DB environment and prompts the user
+ * for a series of SQL queries. User entries are validated, parsed, and printed as
+ * output. User can terminate the program by entering 'quit'.
+ * @return 0 exit program
+ */
+int main() {
+    //int argc, char *argv[]
     // sql5300 shell;
 
 
@@ -259,7 +301,7 @@ int main(int argc, char *argv[]) {
         std::cout << "SQL> ";
         std::cin.getline(newquery, 200);
         std::string query = newquery;
-        std::cout << query << std::endl;
+        // std::cout << query << std::endl;
 
         // Convert query to lowercase for quit
         std::string lowercase = query;
@@ -276,9 +318,8 @@ int main(int argc, char *argv[]) {
 
         //Valid response
         if (result->isValid()) {
-            printf("Valid");
+            // printf("Valid");
             std::string res;
-            //TODO: Fix shell.execute() by adding query parameter (AST type?)
             for (uint i = 0; i < result->size(); ++i) {
                 res += execute(result->getStatement(i), res);
             }
