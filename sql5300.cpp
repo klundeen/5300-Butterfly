@@ -14,11 +14,9 @@
 #include <string>
 
 const char QUIT[5] = "quit";
-const char *HOME = "cpsc5300/data";
-const char *SQLSHELL = "sql5300.db";
-const unsigned int BLOCK_SZ = 4096;
 
 std::string convertExpressionToString(hsql::Expr *expr, std::string res);
+
 std::string convertSelectStatementInfo(const hsql::SelectStatement *stmt, std::string res);
 
 /**
@@ -35,7 +33,7 @@ std::string convertOperatorExpressionToString(hsql::Expr *expr, std::string res)
     res = convertExpressionToString(expr->expr, res);
     switch (expr->opType) {
         case hsql::Expr::SIMPLE_OP:
-            res += std::string(" ") + (char) expr->opChar + " ";
+            res += std::string(" ") + (char) expr->opChar;
             break;
         case hsql::Expr::AND:
             res += std::string(" AND");
@@ -70,11 +68,10 @@ std::string convertExpressionToString(hsql::Expr *expr, std::string res) {
             res += " *";
             break;
         case hsql::kExprColumnRef:
-            if(expr->table) {
-                res += std::string(" ") + expr->table+"."+expr->name;
-            }
-            else{
-                res += std::string(" ") +expr->name;
+            if (expr->table) {
+                res += std::string(" ") + expr->table + "." + expr->name;
+            } else {
+                res += std::string(" ") + expr->name;
             }
             break;
 
@@ -85,7 +82,7 @@ std::string convertExpressionToString(hsql::Expr *expr, std::string res) {
             res += std::string(" ") + std::to_string(expr->ival) + " ";
             break;
         case hsql::kExprLiteralString:
-            res += std::string(" ") +expr->name;
+            res += std::string(" ") + expr->name;
             break;
         case hsql::kExprFunctionRef:
             res += std::string(" ") + expr->name + " " + expr->expr->name + " ";
@@ -99,8 +96,8 @@ std::string convertExpressionToString(hsql::Expr *expr, std::string res) {
     }
 
     if (expr->alias != NULL) {
-        std::cout<<" inside alias ";
-        res += std::string(" ") +expr->alias+"."+expr->name + " ";
+        std::cout << " inside alias ";
+        res += std::string(" ") + expr->alias + "." + expr->name + " ";
 
     }
     return res;
@@ -113,7 +110,6 @@ std::string convertExpressionToString(hsql::Expr *expr, std::string res) {
  * @return formatted SQL String
  */
 std::string convertTableRefInfoToString(hsql::TableRef *table, std::string res) {
-
     switch (table->type) {
         case hsql::kTableName:
 
@@ -123,27 +119,27 @@ std::string convertTableRefInfoToString(hsql::TableRef *table, std::string res) 
             break;
 
         case hsql::kTableSelect:
-            res=convertSelectStatementInfo(table->select, res);
+            res = convertSelectStatementInfo(table->select, res);
             break;
 
         case hsql::kTableJoin:
             res = convertTableRefInfoToString(table->join->left, res);
             switch (table->join->type) {
                 case hsql::kJoinInner:
-                        res += " JOIN ";
-                        break;
+                    res += " JOIN";
+                    break;
                 case hsql::kJoinLeft:
-                        res += " LEFT JOIN ";
-                        break;
+                    res += " LEFT JOIN";
+                    break;
                 case hsql::kJoinRight:
-                        res += " RIGHT JOIN ";
-                        break;
-                        default:
-                        break;
+                    res += " RIGHT JOIN";
+                    break;
+                default:
+                    break;
             }
 
             res = convertTableRefInfoToString(table->join->right, res);
-            res += " ON ";
+            res += " ON";
             res = convertExpressionToString(table->join->condition, res);
             break;
 
@@ -153,7 +149,7 @@ std::string convertTableRefInfoToString(hsql::TableRef *table, std::string res) 
             break;
     }
     if (table->alias != NULL) {
-        res += std::string(" AS ") + table->alias + " ";
+        res += std::string(" AS ") + table->alias;
     }
 
     return res;
@@ -169,8 +165,7 @@ std::string convertSelectStatementInfo(const hsql::SelectStatement *stmt, std::s
     res += " SELECT";
     bool doComma = false;
     for (hsql::Expr *expr : *stmt->selectList) {
-        if (doComma)
-        {
+        if (doComma) {
             res += ",";
         }
         res = convertExpressionToString(expr, res);
@@ -180,7 +175,7 @@ std::string convertSelectStatementInfo(const hsql::SelectStatement *stmt, std::s
     res += " FROM";
     res = convertTableRefInfoToString(stmt->fromTable, res);
     if (stmt->whereClause != NULL) {
-        res += " WHERE ";
+        res += " WHERE";
         res = convertExpressionToString(stmt->whereClause, res);
     }
 
@@ -228,9 +223,8 @@ std::string convertCreateStatementInfo(const hsql::CreateStatement *stmt, std::s
         res += " (";
         bool doComma = false;
         for (auto col_name:*stmt->columns) {
-            if (doComma)
-            {
-                res += ",";
+            if (doComma) {
+                res += ", ";
             }
             res += std::string("") + columnDefinitionToString(col_name);
             doComma = true;
@@ -250,16 +244,6 @@ std::string convertCreateStatementInfo(const hsql::CreateStatement *stmt, std::s
  * @return formatted SQL String
  */
 std::string execute(const hsql::SQLStatement *stmt, std::string res) {
-
-    // Test
-    // std::cout << "\nGot to execute\n" << std::endl;
-    // printf("Parsed successfully!\n");
-    // printf("Number of statements: %lu\n", result->size());
-
-
-    // Print a statement summary.
-    // hsql::printStatementInfo(result->getStatement(i));
-    // const hsql::SQLStatement* stmt=result->getStatement(i);
 
     switch (stmt->type()) {
         case hsql::kStmtSelect:
@@ -287,28 +271,26 @@ std::string execute(const hsql::SQLStatement *stmt, std::string res) {
  */
 int main(int argc, char **argv) {
 
-    // sql5300 shell;
-
     //Create DB environment
-    /*
-    std::cout << "Have you created a dir: ~/" << HOME  << "? (y/n) " << std::endl;
-    std::string ans;
-    std::cin >> ans;
-    if( ans[0] != 'y')
-	return 1;
-    */
-    const char *home = std::getenv("HOME");
-    std::string envdir = std::string(home) + "/" + HOME;
+    char *home = argv[1];
+
+    if (argc != 2) {
+        std::cerr << "Example usage: ./sql5300 ~/cpsc5300/data" << std::endl;
+        return 1;
+    }
 
     DbEnv env(0U);
     env.set_message_stream(&std::cout);
     env.set_error_stream(&std::cerr);
-    env.open(envdir.c_str(), DB_CREATE | DB_INIT_MPOOL, 0);
+    try {
+        env.open(home, DB_CREATE | DB_INIT_MPOOL, 0);
+    } catch (DbException &exc) {
+        std::cerr << "(sql5300: " << exc.what() << ")";
+        exit(1);
+    }
 
-    Db db(&env, 0);
-    db.set_message_stream(env.get_message_stream());
-    db.set_re_len(BLOCK_SZ);
-    db.open(NULL, SQLSHELL, NULL, DB_RECNO, DB_CREATE | DB_TRUNCATE, 0644);
+    // Database environment success message
+    std::cout << "(sql5300: Running with database environment at " << home << ")" << std::endl;
 
     char newquery[200];
     // User prompt loop
@@ -317,7 +299,6 @@ int main(int argc, char **argv) {
         std::cout << "SQL> ";
         std::cin.getline(newquery, 200);
         std::string query = newquery;
-        // std::cout << query << std::endl;
 
         // Convert query to lowercase for quit
         std::string lowercase = query;
@@ -334,23 +315,18 @@ int main(int argc, char **argv) {
 
         //Valid response
         if (result->isValid()) {
-            // printf("Valid");
             std::string res;
             for (uint i = 0; i < result->size(); ++i) {
                 res += execute(result->getStatement(i), res);
             }
 
-            // Print a statement summary.
-            // hsql::printStatementInfo(result->getStatement(i));
-            // res=execute(result,res);
-
             std::cout << res << std::endl;
-            //std::string res=shell.execute(&result);
             delete result;
 
 
         } else { //Invalid response
-            fprintf(stderr, "Given string is not valid.\n");
+            fprintf(stderr, "Invalid SQL: ");
+            std::cout << query << std::endl;
             fprintf(stderr, "%s (L%d:%d)\n", result->errorMsg(),
                     result->errorLine(), result->errorColumn());
             delete result;
