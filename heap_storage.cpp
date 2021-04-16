@@ -1,5 +1,43 @@
 #include "heap_storage.h"
-bool test_heap_storage() {return true;}
+bool test_heap_storage() {
+    ColumnNames column_names;
+    column_names.push_back("a");
+    column_names.push_back("b");
+    ColumnAttributes column_attributes;
+    ColumnAttribute ca(ColumnAttribute::INT);
+    column_attributes.push_back(ca);
+    ca.set_data_type(ColumnAttribute::TEXT);
+    column_attributes.push_back(ca);
+    HeapTable table1("_test_create_drop_cpp", column_names, column_attributes);
+    table1.create();
+    std::cout << "create ok" << std::endl;
+    table1.drop();  // drop makes the object unusable because of BerkeleyDB restriction -- maybe want to fix this some day
+    std::cout << "drop ok" << std::endl;
+
+    HeapTable table("_test_data_cpp", column_names, column_attributes);
+    table.create_if_not_exists();
+    std::cout << "create_if_not_exsts ok" << std::endl;
+
+    ValueDict row;
+    row["a"] = Value(12);
+    row["b"] = Value("Hello!");
+    std::cout << "try insert" << std::endl;
+    table.insert(&row);
+    std::cout << "insert ok" << std::endl;
+    Handles* handles = table.select();
+    std::cout << "select ok " << handles->size() << std::endl;
+    ValueDict *result = table.project((*handles)[0]);
+    std::cout << "project ok" << std::endl;
+    Value value = (*result)["a"];
+    if (value.n != 12)
+        return false;
+    value = (*result)["b"];
+    if (value.s != "Hello!")
+        return false;
+    table.drop();
+
+
+}
 
 
 //Slotted Page
@@ -43,40 +81,6 @@ SlottedPage::~SlottedPage() {}
 
 /**
  *
- * @param other
- */
-SlottedPage :: SlottedPage(const SlottedPage &other) {
-    /* FIXME FIXME FIXME */
-}
-
-/**
- *
- * @param temp
- */
-SlottedPage :: SlottedPage(SlottedPage &&temp) {
-    /* FIXME FIXME FIXME */
-}
-
-/**
- *
- * @param other
- * @return
- */
-SlottedPage &operator=(const SlottedPage &other){
-    /* FIXME FIXME FIXME */
-}
-
-/**
- *
- * @param temp
- * @return
- */
-SlottedPage &operator=(SlottedPage &temp) {
-    /* FIXME FIXME FIXME */
-}
-
-/**
- *
  * @param data
  * @return
  */
@@ -99,8 +103,9 @@ RecordID SlottedPage::add(const Dbt* data) {
  * @param record_id
  * @return
  */
-Dbt * SlottedPage::get(RecordID record_id){
-    /* FIXME FIXME FIXME */
+Dbt* SlottedPage::get(RecordID record_id){
+    """ Get a record from the block. Return None if it has been deleted. """
+    
 }
 
 /**
@@ -109,7 +114,8 @@ Dbt * SlottedPage::get(RecordID record_id){
  * @param data
  */
 void SlottedPage::put(RecordID record_id, const Dbt &data){
-    /* FIXME FIXME FIXME */
+    """ Replace the record with the given data. Raises ValueError if it won't fit. """
+
 }
 
 /**
@@ -135,7 +141,8 @@ RecordIDs * SlottedPage::ids(void){
  * @param id
  */
 void SlottedPage::get_header(u_int16_t &size, u_int16_t &loc, RecordID id = 0){
-    /* FIXME FIXME FIXME */
+    """ Get the size and offset for given id. For id of zero, it is the block header. """
+    //return this->get_n(4*id), this->get_n(4 * id + 2)
 }
 
 /**
@@ -205,75 +212,80 @@ void* SlottedPage::address(u16 offset) {
  * Destructor
  */
 HeapFile::~HeapFile() {}
-
-/**
- *
- * @param other
- */
-HeapFile::HeapFile(const HeapFile &other){
-    /* FIXME FIXME FIXME */
+HeapFile::HeapFile(std::string name) : DbFile(name), dbfilename(""), last(0), closed(true), db(_DB_ENV, 0) {
+this.block_size= sizeof(name);//??
 }
 
-/**
- *
- * @param temp
- */
-HeapFile::HeapFile(HeapFile &&temp){
-    /* FIXME FIXME FIXME */
+void HeapFile::db_open(uint flags = 0){
+    """ Wrapper for Berkeley DB open, which does both open and creation. """
+    if(this->closed== false){
+        return;
+    }
+    this->db=dbd.DB();
+    this->db.set_re_len(this.block_size);
+    this->dbfilename=os.path.join(_DB_ENV, this->name+'.db');
+    auto dbtype= bdb.DB_RECNO;
+    this->db.open(this->dbfilename,None,dbtype,flags);
+    this.stat = this->db.stat(bdb.DB_FAST_STAT);
+    this->last = this.stat['ndata']
+    this->closed = false;
 }
-
-/**
- *
- * @param other
- * @return
- */
-HeapFile::HeapFile &operator=(const HeapFile &other){
-    /* FIXME FIXME FIXME */
-}
-
-/**
- *
- * @param temp
- * @return
- */
-HeapFile::HeapFile &operator=(HeapFile &&temp){
-    /* FIXME FIXME FIXME */
-}
-
 /**
  *
  */
 void HeapFile::create(void){
-    /* FIXME FIXME FIXME */
+    """ Create physical file. """
+    this->db_open(dbd.DB_CREATE | bdb.DB_EXCL);
+    auto block = this->get_new(); //first block of the file
+    this->put(block);
 }
 
 /**
  *
  */
 void HeapFile::drop(void){
-    /* FIXME FIXME FIXME */
+    """ Delete the physical file. """
+    this->close();
+    os.remove(this->dbfilename);
 }
 
 /**
  *
  */
 void HeapFile::open(void){
-    /* FIXME FIXME FIXME */
+    """ Open physical file. """
+    this->db_open();
+    this.block_size= this.stat['re-len'];
+
 }
 
 /**
  *
  */
 void HeapFile::close(void){
-    /* FIXME FIXME FIXME */
+    """ Close the physical file. """
+    this->db.close();
+    this->closed= true;
 }
 
 /**
- *
+ *Allocate a new block for the database file.
+ *Returns the new empty DbBlock that is managing the records in this block and its block id.
  * @return
  */
-SlottedPage * HeapFile::get_new(void){
-    /* FIXME FIXME FIXME */
+SlottedPage* HeapFile::get_new(void){
+    char block[DbBlock::BLOCK_SZ];
+    std::memset(block, 0, sizeof(block));
+    Dbt data(block, sizeof(block));
+
+    int block_id = ++this->last;
+    Dbt key(&block_id, sizeof(block_id));
+
+    // write out an empty block and read it back in so Berkeley DB is managing the memory
+    SlottedPage* page = new SlottedPage(data, this->last, true);
+    this->db.put(nullptr, &key, &data, 0); // write it out with initialization applied
+    this->db.get(nullptr, &key, &data, 0);
+    return page;
 }
 
 /**
@@ -281,8 +293,9 @@ SlottedPage * HeapFile::get_new(void){
  * @param block_id
  * @return
  */
-SlottedPage * HeapFile::get(BlockID block_id){
-    /* FIXME FIXME FIXME */
+SlottedPage* HeapFile::get(BlockID block_id){
+    """ Get a block from the database file. """
+    return SlottedPage(block=this.db.get(block_id), block_id=block_id)
 }
 
 /**
@@ -290,24 +303,23 @@ SlottedPage * HeapFile::get(BlockID block_id){
  * @param block
  */
 void HeapFile::put(DbBlock *block){
-    /* FIXME FIXME FIXME */
+    """ Write a block back to the database file. """
+    this->db.put(block->get_block_id(),bytes(block->get_block()))
 }
 
 /**
  *
  * @return
  */
-BlockIDs * HeapFile::block_ids(){
-    /* FIXME FIXME FIXME */
+BlockIDs* HeapFile::block_ids(){
+    """ Sequence of all block ids. """
+    for(auto i =1;i< this->last+1,i++){
+        return i;
+    }
+
 }
 
-/**
- *
- * @param flags
- */
-void HeapFile::db_open(uint flags = 0){
-    /* FIXME FIXME FIXME */
-}
+
 
 /*
  * _______________________HEAP Table_________________________________________
