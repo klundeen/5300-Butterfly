@@ -434,7 +434,7 @@ HeapTable::HeapTable(HeapTable &&temp){
  * @return
  */
 HeapTable::HeapTable &operator=(const HeapTable &other){
-    /* FIXME FIXME FIXME */
+    /* FIXME Not milestone2 */
 }
 
 /**
@@ -443,43 +443,51 @@ HeapTable::HeapTable &operator=(const HeapTable &other){
  * @return
  */
 HeapTable::HeapTable &operator=(HeapTable &&temp) {
-    /* FIXME FIXME FIXME */
+    /* FIXME Not milestone2 */
 }
 
 /**
  *
  */
 void HeapTable::create(){
-    /* FIXME FIXME FIXME */
-}
+
+    this->file.create();
+} // TODO
 
 /**
  *
  */
 void HeapTable::create_if_not_exists(){
-    /* FIXME FIXME FIXME */
-}
+
+    try {
+        this->open();
+    } catch (db.DBNoSuchFileError) {
+        this->create();
+    }
+} // TODO
 
 /**
  *
  */
 void HeapTable::drop(){
-    /* FIXME FIXME FIXME */
-}
+    this->file.drop();
+} // TODO
 
 /**
  *
  */
 void HeapTable::open(){
-    /* FIXME FIXME FIXME */
-}
+
+    this->file.open();
+} // TODO
 
 /**
  *
  */
 void HeapTable::close(){
-    /* FIXME FIXME FIXME */
-}
+
+    this->file.close();
+} // TODO
 
 /**
  *
@@ -487,8 +495,10 @@ void HeapTable::close(){
  * @return
  */
 Handle HeapTable::insert(const ValueDict *row){
-    /* FIXME FIXME FIXME */
-}
+
+    this->open();
+    return this->append(this->validate(row));
+} // TODO
 
 /**
  *
@@ -496,7 +506,7 @@ Handle HeapTable::insert(const ValueDict *row){
  * @param new_values
  */
 void HeapTable::update(const Handle handle, const ValueDict *new_values){
-    /* FIXME FIXME FIXME */
+    /* FIXME Not milestone2 */
 }
 
 /**
@@ -504,7 +514,7 @@ void HeapTable::update(const Handle handle, const ValueDict *new_values){
  * @param handle
  */
 void HeapTable::del(const Handle handle){
-    /* FIXME FIXME FIXME */
+    /* FIXME Not milestone2 */
 }
 
 /**
@@ -512,7 +522,7 @@ void HeapTable::del(const Handle handle){
  * @return
  */
 Handles * HeapTable::select(){
-    /* FIXME FIXME FIXME */
+    /* FIXME Not milestone2 */
 }
 
 /**
@@ -521,7 +531,18 @@ Handles * HeapTable::select(){
  * @return
  */
 Handles * HeapTable::select(const ValueDict *where){
-    /* FIXME FIXME FIXME */
+    Handles* handles = new Handles();
+    BlockIDs* block_ids = file.block_ids();
+    for (auto const& block_id: *block_ids) {
+        SlottedPage* block = file.get(block_id);
+        RecordIDs* record_ids = block->ids();
+        for (auto const& record_id: *record_ids)
+            handles->push_back(Handle(block_id, record_id));
+        delete record_ids;
+        delete block;
+    }
+    delete block_ids;
+    return handles;
 }
 
 /**
@@ -530,7 +551,7 @@ Handles * HeapTable::select(const ValueDict *where){
  * @return
  */
 ValueDict * HeapTable::project(Handle handle){
-    /* FIXME FIXME FIXME */
+    /* FIXME Not milestone2 */
 }
 
 /**
@@ -540,7 +561,7 @@ ValueDict * HeapTable::project(Handle handle){
  * @return
  */
 ValueDict * HeapTable::project(Handle handle, const ColumnNames *column_names){
-    /* FIXME FIXME FIXME */
+    /* FIXME Not milestone2 */
 }
 
 /**
@@ -558,7 +579,7 @@ ValueDict * HeapTable::validate(const ValueDict *row){
  * @return
  */
 Handle HeapTable::append(const ValueDict *row){
-    /* FIXME FIXME FIXME */
+    /* FIXME Not milestone2 */
 }
 
 /**
@@ -567,7 +588,31 @@ Handle HeapTable::append(const ValueDict *row){
  * @return
  */
 Dbt * HeapTable::marshal(const ValueDict *row){
-    /* FIXME FIXME FIXME */
+    char *bytes = new char[DbBlock::BLOCK_SZ]; // more than we need (we insist that one row fits into DbBlock::BLOCK_SZ)
+    uint offset = 0;
+    uint col_num = 0;
+    for (auto const& column_name: this->column_names) {
+        ColumnAttribute ca = this->column_attributes[col_num++];
+        ValueDict::const_iterator column = row->find(column_name);
+        Value value = column->second;
+        if (ca.get_data_type() == ColumnAttribute::DataType::INT) {
+            *(int32_t*) (bytes + offset) = value.n;
+            offset += sizeof(int32_t);
+        } else if (ca.get_data_type() == ColumnAttribute::DataType::TEXT) {
+            uint size = value.s.length();
+            *(u16*) (bytes + offset) = size;
+            offset += sizeof(u16);
+            memcpy(bytes+offset, value.s.c_str(), size); // assume ascii for now
+            offset += size;
+        } else {
+            throw DbRelationError("Only know how to marshal INT and TEXT");
+        }
+    }
+    char *right_size_bytes = new char[offset];
+    memcpy(right_size_bytes, bytes, offset);
+    delete[] bytes;
+    Dbt *data = new Dbt(right_size_bytes, offset);
+    return data;
 }
 
 /**
@@ -576,5 +621,5 @@ Dbt * HeapTable::marshal(const ValueDict *row){
  * @return
  */
 ValueDict * HeapTable::unmarshal(Dbt *data){
-    /* FIXME FIXME FIXME */
+    /* FIXME Not milestone2 */
 }
