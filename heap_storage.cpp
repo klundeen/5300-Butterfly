@@ -105,7 +105,17 @@ RecordID SlottedPage::add(const Dbt* data) {
  */
 Dbt* SlottedPage::get(RecordID record_id){
     """ Get a record from the block. Return None if it has been deleted. """
-    
+    u16 *size=this->num_records;
+    u16 *loc= this->end_free;
+    this->get_header(&size, &loc,record_id);
+    if(loc==0){
+        return NULL;
+    }
+    //?? data->get_data() , how to unmarshall?
+    return memcpy(this->address(loc),data->get_data(), size);
+    //return memcpy(this->address(loc),Null, size); ?
+
+
 }
 
 /**
@@ -115,7 +125,23 @@ Dbt* SlottedPage::get(RecordID record_id){
  */
 void SlottedPage::put(RecordID record_id, const Dbt &data){
     """ Replace the record with the given data. Raises ValueError if it won't fit. """
-
+    u16 *size=this->num_records;
+    u16 *loc= this->end_free;
+    this->get_header(&size,&loc,record_id);
+    u16 new_size = (u16) data->get_size();
+    if(new_size > size){
+        u16 extra= new_size-size;
+        if(!this->has_room(extra))
+            throw DbBlockNoRoomError("not enough room for new record");
+        this->slide(loc+new_size,loc+size);
+        memcpy(this->address(loc-extra), data->get_data(),new_size);
+    }
+    else{
+        memcpy(this->address(loc),data->get_data(),new_size);
+        this->slide(loc+new_size,loc+size);
+    }
+    this->get_header(&size,&loc,record_id);
+    this->put_header(record_id,size,loc);
 }
 
 /**
@@ -123,15 +149,31 @@ void SlottedPage::put(RecordID record_id, const Dbt &data){
  * @param record_id
  */
 void SlottedPage::del(RecordID record_id){
-    /* FIXME FIXME FIXME */
+    // Mark the given id as deleted by changing its size to zero and its location to 0.
+    // Compact the rest of the data in the block. But keep the record ids the same for everyone.
+    u16 *size=this->num_records;
+    u16 *loc= this->end_free;
+    this->get_header(&size,&loc,record_id);
+    this->put_header(id,0,0);
+    this->slide(loc,loc+size);
+
 }
 
 /**
  *
  * @return
  */
-RecordIDs * SlottedPage::ids(void){
-    /* FIXME FIXME FIXME */
+RecordIDs* SlottedPage::ids(void){
+    """ Sequence of all non-deleted record ids. """
+    for(int i=1;i< this->num_records+1;i++){
+        u16 *size=this->num_records;
+        u16 *loc= this->end_free;
+        this->get_header(&size, &loc,i);
+        if(loc!=0){
+            return i;
+        }
+
+    }
 }
 
 /**
@@ -141,8 +183,9 @@ RecordIDs * SlottedPage::ids(void){
  * @param id
  */
 void SlottedPage::get_header(u_int16_t &size, u_int16_t &loc, RecordID id = 0){
-    """ Get the size and offset for given id. For id of zero, it is the block header. """
-    //return this->get_n(4*id), this->get_n(4 * id + 2)
+    """ Find the size and offset for given id. For id of zero, it is the block header. """
+    size=this->get_n(4*id);
+    loc=this->get_n(4 * id + 2)
 }
 
 /**
@@ -167,11 +210,40 @@ void SlottedPage::put_header(RecordID id, u16 size, u16 loc) {
  * @return
  */
 bool SlottedPage::has_room(u_int16_t size){
-    /* FIXME FIXME FIXME */
+    //Calculate if we have room to store a record with given size. The size should include the 4 bytes
+    //for the header, too, if this is an add.
+    u_int16_t available=this->end_free-(this->num_records+1)*4;
+    return size <= available;
 }
 
+/* If start < end, then remove data from offset start up to but not including offset end by sliding data
+that is to the left of start to the right. If start > end, then make room for extra data from end to start
+by sliding data that is to the left of start to the left.
+Also fix up any record headers whose data has slid. Assumes there is enough room if it is a left
+shift (end < start).
+*/
+
 void SlottedPage::slide(u_int16_t start, u_int16_t end){
-    /* FIXME FIXME FIXME */
+    u_int16_t shift = end-start;
+    if(shift==0){
+        return;
+    }
+    //slide data ??
+    memcpy(this->address(this->end_free+1+shift),memcpy(this->address(this->end_free+1),Null,start),end);
+
+    //fix headers
+    for(RecordID id:this->ids()){
+        u16 *size=this->num_records;
+        u16 *loc= this->end_free;
+        this->get_header(&size, &loc,id);
+        if(loc<=start){
+            loc +=shift;
+            this->put_header(id,size,loc);
+        }
+    }
+
+    this->end_free +=shift;
+    this->put_header();
 }
 
 /**
