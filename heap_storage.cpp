@@ -561,14 +561,14 @@ ValueDict * HeapTable::validate(const ValueDict *row){
  * @return
  */
 Handle HeapTable::append(const ValueDict *row){
-    ValueDict *data = this->marshal(row); //Fix
-    SlottedPage *block = this->file.get_last_block_id(); //Fix
+    Dbt *data = this->marshal(row);
+    SlottedPage * block = this->file.get(this->file.get_last_block_id());
     u_int16_t record_id;
     try {
-        record_id = block->add(data); //Fix
+        record_id = block->add(data);
     } catch (DbRelationError) {
         block = this->file.get_new();
-        record_id = block->add(data); //Fix
+        record_id = block->add(data);
     }
     this->file.put(block);
     unsigned int id = this->file.get_last_block_id();
