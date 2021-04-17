@@ -39,6 +39,9 @@ bool test_heap_storage() {
 
 
 }
+
+
+//Slotted Page
 typedef u_int16_t u16;
 u_int16_t num_records;
 u_int16_t end_free;
@@ -280,7 +283,7 @@ void* SlottedPage::address(u16 offset) {
 
 
 HeapFile::HeapFile(std::string name) : DbFile(name), dbfilename(""), last(0), closed(true), db(_DB_ENV, 0) {
-this.block_size= sizeof(name);//??
+    this.block_size= sizeof(name);//??
 }
 
 //Wrapper for Berkeley DB open, which does both open and creation.
@@ -367,7 +370,7 @@ SlottedPage* HeapFile::get(BlockID block_id){
  * @param block
  */
 void HeapFile::put(DbBlock *block){
-    this->db.put(block->get_block_id(), bytes(block->get_block()))
+    this->db.put(block->get_block_id(),bytes(block->get_block()))
 }
 
 /**
@@ -396,6 +399,7 @@ BlockIDs* HeapFile::block_ids(){
 HeapTable::HeapTable(Identifier table_name, ColumnNames column_names, ColumnAttributes column_attributes){
     /* FIXME FIXME FIXME */
 }
+
 /**
  * Destructor
  */
@@ -611,4 +615,4 @@ Dbt * HeapTable::marshal(const ValueDict *row){
  */
 ValueDict * HeapTable::unmarshal(Dbt *data){
     /* FIXME Not milestone2 */
-}}
+}
