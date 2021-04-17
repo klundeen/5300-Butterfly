@@ -291,28 +291,28 @@ void* SlottedPage::address(u16 offset) {
  * _______________________HEAP FILE_________________________________________
  */
 
-
+/*
 HeapFile::HeapFile(std::string name) : DbFile(name), dbfilename(""), last(0), closed(true), db(_DB_ENV, 0) { //fix
     this->block_size= sizeof(name);//??
 
 }
-
+*/
 
 //Wrapper for Berkeley DB open, which does both open and creation.
-void HeapFile::db_open(uint flags=0){ //fix
+void HeapFile::db_open(uint flags){
 
     if(this->closed== false){
         return;
     }
-    this->db=db.DB(); //fix
-    this->db.set_re_len(this->block_size); //fix
+    this->db=db.Db();         //->block_size
+    this->db.set_re_len(this->db.block_size); //fix
     //QString path =
     this->dbfilename=(char*)_DB_ENV+(char*)this->name+'.db'; //fix
    // this->dbfilename=os.path.join(_DB_ENV,(char)this->name+'.db');
-    auto dbtype= db.DB_RECNO; //fix
+    auto dbtype = db.DB_RECNO; //fix
     this->db.open(this->dbfilename,NULL,dbtype,flags);
-    this->stat = this->db.stat(db.DB_FAST_STAT); //fix
-    this->last = this->stat['ndata'] //fix
+    this->db.stat = this->db.stat(db.DB_FAST_STAT); //fix
+    this->last = this->db.stat['ndata'] //fix
     this->closed = false;
 }
 /**
@@ -338,7 +338,7 @@ void HeapFile::drop(void){
  */
 void HeapFile::open(void){
     this->db_open();
-    this->block_size= this->stat['re-len'];//?? //fix
+    this->block_size= this->db.stat['re-len'];//?? //fix
 
 }
 
@@ -412,7 +412,8 @@ BlockIDs* HeapFile::block_ids(){
  * @param column_attributes
  */
 HeapTable::HeapTable(Identifier table_name, ColumnNames column_names, ColumnAttributes column_attributes){
-    /* FIXME FIXME FIXME */ //Fix
+    DbRelation(table_name, column_names, column_attributes);
+    this->file = HeapFile(table_name, DbBlock::BLOCK_SZ);
 }
 
 
@@ -428,7 +429,7 @@ void HeapTable::create_if_not_exists(){
 
     try {
         this->open();
-    } catch (db->DBNoSuchFileError) { //Fix
+    } catch (DbRelationError) { //Fix
         this->create();
     }
 } // TODO
@@ -561,7 +562,7 @@ ValueDict * HeapTable::validate(const ValueDict *row){
  */
 Handle HeapTable::append(const ValueDict *row){
     ValueDict *data = this->marshal(row); //Fix
-    SlottedPage *block = this->file..get_last_block_id(); //Fix
+    SlottedPage *block = this->file.get_last_block_id(); //Fix
     u_int16_t record_id;
     try {
         record_id = block->add(data); //Fix
