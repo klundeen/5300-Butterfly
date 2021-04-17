@@ -1,5 +1,7 @@
 #include "heap_storage.h"
+#include <stdio.h>
 #include <iostream>
+#include <cstring>
 bool test_heap_storage() {
     ColumnNames column_names;
     column_names.push_back("a");
@@ -113,7 +115,7 @@ Dbt* SlottedPage::get(RecordID record_id){
         return NULL;
     }
     //?? data->get_data() , how to unmarshall?
-    return memcpy(this->address(loc),data->get_data(), size);
+    return (Dbt*)memcpy(this->address(loc),NULL, size);
     //return memcpy(this->address(loc),Null, size); ?
 
 
@@ -155,7 +157,7 @@ void SlottedPage::del(RecordID record_id){
     u16 size=(u16)this->num_records;
     u16 loc=(u16)this->end_free;
     this->get_header(size,loc,record_id);
-    this->put_header(id,0,0);
+    this->put_header(record_id,0,0);
     this->slide(loc,loc+size);
 
 }
@@ -164,17 +166,19 @@ void SlottedPage::del(RecordID record_id){
  * Sequence of all non-deleted record ids.
  * @return
  */
-RecordIDs* SlottedPage::ids(void){
+RecordIDs * SlottedPage::ids(void){
+    RecordIDs* ids;
 
-    for( RecordID =1;i<this->num_records+1;i++){
+    for( RecordID i=1;i<this->num_records+1;i++){
         u16 size=(u16)this->num_records;
         u16 loc=(u16)this->end_free;
         this->get_header(size, loc,i);
         if(loc!=0){
-            return i;
+            ids->push_back(i);
         }
 
     }
+    return ids;
 }
 
 /**
@@ -233,7 +237,10 @@ void SlottedPage::slide(u_int16_t start, u_int16_t end){
     memcpy(this->address(this->end_free+1+shift),memcpy(this->address(this->end_free+1),NULL,start),end);
 
     //fix headers
-    for(RecordID id:this->ids()){
+
+    RecordIDs::iterator<RecordID> id;
+
+    for(id = this->ids()->begin(); id != this->ids()->end(); ++id){
         u_int16_t size=this->num_records;
         u_int16_t loc=this->end_free;
         this->get_header(size, loc,id);
@@ -283,20 +290,24 @@ void* SlottedPage::address(u16 offset) {
 
 
 HeapFile::HeapFile(std::string name) : DbFile(name), dbfilename(""), last(0), closed(true), db(_DB_ENV, 0) {
-    this.block_size= sizeof(name);//??
+    this->block_size= sizeof(name);//??
+
 }
 
+
 //Wrapper for Berkeley DB open, which does both open and creation.
-void HeapFile::db_open(uint flags = 0){
+void HeapFile::db_open(uint flags=0){
 
     if(this->closed== false){
         return;
     }
     this->db=db.DB();
-    this->db.set_re_len(this.block_size);
-    this->dbfilename=os.path.join(_DB_ENV,(char)this->name+'.db');
+    this->db.set_re_len(this->block_size);
+    //QString path =
+    this->dbfilename=(char*)_DB_ENV+(char*)this->name+'.db';
+   // this->dbfilename=os.path.join(_DB_ENV,(char)this->name+'.db');
     auto dbtype= db.DB_RECNO;
-    this->db.open(this->dbfilename,None,dbtype,flags);
+    this->db.open(this->dbfilename,NULL,dbtype,flags);
     this->stat = this->db.stat(db.DB_FAST_STAT);
     this->last = this->stat['ndata']
     this->closed = false;
@@ -316,7 +327,7 @@ void HeapFile::create(void){
 void HeapFile::drop(void){
 
     this->close();
-    os.remove(this->dbfilename);
+    remove((char*)this->dbfilename);
 }
 
 /**
@@ -324,7 +335,7 @@ void HeapFile::drop(void){
  */
 void HeapFile::open(void){
     this->db_open();
-    this->block_size= this->stat['re-len'];
+    this->block_size= this->stat['re-len'];//??
 
 }
 
@@ -362,7 +373,7 @@ SlottedPage* HeapFile::get_new(void){
  * @return
  */
 SlottedPage* HeapFile::get(BlockID block_id){
-    return SlottedPage(block=this.db.get(block_id), block_id=block_id);
+    return SlottedPage(this->db.get(block_id),block_id);
 }
 
 /**
@@ -370,7 +381,7 @@ SlottedPage* HeapFile::get(BlockID block_id){
  * @param block
  */
 void HeapFile::put(DbBlock *block){
-    this->db.put(block->get_block_id(),bytes(block->get_block()))
+    this->db.put(block->get_block_id(),to_bytes(block->get_block()))
 }
 
 /**
@@ -378,10 +389,11 @@ void HeapFile::put(DbBlock *block){
  * @return
  */
 BlockIDs* HeapFile::block_ids(){
-    for(auto i =1;i<(int)this->last+1;i++){
-        return i;
+    std::vector<BlockID>* ids;
+    for(BlockID i =1;i<(BlockID)this->last+1;i++){
+        ids->push_back(i);
     }
-
+    return ids;
 }
 
 
@@ -400,48 +412,7 @@ HeapTable::HeapTable(Identifier table_name, ColumnNames column_names, ColumnAttr
     /* FIXME FIXME FIXME */
 }
 
-/**
- * Destructor
- */
-HeapTable::~HeapTable() {}
 
-/**
- *
- * @param other
- */
-HeapTable::HeapTable(const HeapTable &other) {
-    /* FIXME FIXME FIXME */
-}
-
-/**
- *
- * @param temp
- */
-HeapTable::HeapTable(HeapTable &&temp){
-    /* FIXME FIXME FIXME */
-}
-
-/**
- *
- * @param other
- * @return
- */
-HeapTable::HeapTable &operator=(const HeapTable &other){
-    /* FIXME Not milestone2 */
-}
-
-/**
- *
- * @param temp
- * @return
- */
-HeapTable::HeapTable &operator=(HeapTable &&temp) {
-    /* FIXME Not milestone2 */
-}
-
-/**
- *
- */
 void HeapTable::create(){
 
     this->file.create();
@@ -454,7 +425,7 @@ void HeapTable::create_if_not_exists(){
 
     try {
         this->open();
-    } catch (db.DBNoSuchFileError) {
+    } catch (db->DBNoSuchFileError) {
         this->create();
     }
 } // TODO
