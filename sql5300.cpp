@@ -5,15 +5,22 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <cstring>
 #include <iostream>
 #include <algorithm>
 #include "sql5300.h"
 #include "sqlhelper.h"
 #include "SQLParser.h"
-#include <db_cxx.h>
+#include "heap_storage.h"
+#include "db_cxx.h"
 #include <string>
 
 const char QUIT[5] = "quit";
+
+/*
+ * allocate and initialize the _DB_ENV global
+ */
+DbEnv *_DB_ENV;
 
 std::string convertExpressionToString(hsql::Expr *expr, std::string res);
 
@@ -292,6 +299,8 @@ int main(int argc, char **argv) {
     // Database environment success message
     std::cout << "(sql5300: Running with database environment at " << home << ")" << std::endl;
 
+    _DB_ENV = &env;
+
     char newquery[200];
     // User prompt loop
     while (true) {
@@ -303,11 +312,17 @@ int main(int argc, char **argv) {
         // Convert query to lowercase for quit
         std::string lowercase = query;
         transform(lowercase.begin(), lowercase.end(), lowercase.begin(), ::tolower);
+        if (query.length() == 0)
+            continue;  // skip if user enters blank line
 
         // Exit if user enters quit (any case).
         if (lowercase == QUIT) {
             std::cout << "\nExiting Program\n" << std::endl;
             break;
+        }
+        if (query == "test") {
+            std::cout << "test_heap_storage: " << (test_heap_storage() ? "ok" : "failed") << std::endl;
+            continue;
         }
 
         //Parse response
