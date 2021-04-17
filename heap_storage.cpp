@@ -2,6 +2,14 @@
 #include <stdio.h>
 #include <iostream>
 #include <cstring>
+#include <map>
+#include "storage_engine.h"
+#include <exception>
+#include <utility>
+#include <vector>
+#include "db_cxx.h"
+
+
 bool test_heap_storage() {
     ColumnNames column_names;
     column_names.push_back("a");
@@ -42,25 +50,20 @@ bool test_heap_storage() {
 
 }
 
-
-//Slotted Page
 typedef u_int16_t u16;
 u_int16_t num_records;
 u_int16_t end_free;
 u_int32_t last;
 bool closed;
-/*
-//Slotted Page
 
+// More type aliases
+typedef std::string Identifier;
+typedef std::vector<Identifier> ColumnNames;
+typedef std::vector<ColumnAttribute> ColumnAttributes;
+typedef std::pair<BlockID, RecordID> Handle;
+typedef std::vector<Handle> Handles;  // FIXME: will need to turn this into an iterator at some point
+typedef std::map<Identifier, Value> ValueDict;
 
-// Heap File
-std::string dbfilename;
-
-Db db;
-
-// Heap Table
-HeapFile file;
-*/
 /*
  * _______________________SLOTTED PAGE_________________________________________
  */
@@ -131,16 +134,16 @@ void SlottedPage::put(RecordID record_id, const Dbt &data){
     u16 size=(u16)this->num_records;
     u16 loc= (u16)this->end_free;
     this->get_header(size,loc,record_id);
-    u16 new_size = (u16) data->get_size();
+    u16 new_size = (u16) data.get_size();
     if(new_size > size){
         u16 extra= new_size-size;
         if(!this->has_room(extra))
             throw DbBlockNoRoomError("not enough room for new record");
         this->slide(loc+new_size,loc+size);
-        memcpy(this->address(loc-extra), data->get_data(),new_size);
+        memcpy(this->address(loc-extra), data.get_data(),new_size);
     }
     else{
-        memcpy(this->address(loc),data->get_data(),new_size);
+        memcpy(this->address(loc),data.get_data(),new_size);
         this->slide(loc+new_size,loc+size);
     }
     this->get_header(size,loc,record_id);
@@ -186,8 +189,8 @@ RecordIDs * SlottedPage::ids(void){
  * @param size
  * @param loc
  * @param id
- */
-void SlottedPage::get_header(u_int16_t &size, u_int16_t &loc, RecordID id = 0){
+ */                                                                     //=0
+void SlottedPage::get_header(u_int16_t &size, u_int16_t &loc, RecordID id){
 
     size=this->get_n(4*id);
     loc=this->get_n(4 * id + 2);
@@ -238,15 +241,15 @@ void SlottedPage::slide(u_int16_t start, u_int16_t end){
 
     //fix headers
 
-    RecordIDs::iterator<RecordID> id;
+    RecordIDs::iterator<RecordID> id; //fix
 
     for(id = this->ids()->begin(); id != this->ids()->end(); ++id){
         u_int16_t size=this->num_records;
         u_int16_t loc=this->end_free;
-        this->get_header(size, loc,id);
+        this->get_header(size, loc,id); //fix
         if(loc<=start){
             loc +=shift;
-            this->put_header(id,size,loc);
+            this->put_header(id,size,loc); //fix
         }
     }
 
@@ -289,27 +292,27 @@ void* SlottedPage::address(u16 offset) {
  */
 
 
-HeapFile::HeapFile(std::string name) : DbFile(name), dbfilename(""), last(0), closed(true), db(_DB_ENV, 0) {
+HeapFile::HeapFile(std::string name) : DbFile(name), dbfilename(""), last(0), closed(true), db(_DB_ENV, 0) { //fix
     this->block_size= sizeof(name);//??
 
 }
 
 
 //Wrapper for Berkeley DB open, which does both open and creation.
-void HeapFile::db_open(uint flags=0){
+void HeapFile::db_open(uint flags=0){ //fix
 
     if(this->closed== false){
         return;
     }
-    this->db=db.DB();
-    this->db.set_re_len(this->block_size);
+    this->db=db.DB(); //fix
+    this->db.set_re_len(this->block_size); //fix
     //QString path =
-    this->dbfilename=(char*)_DB_ENV+(char*)this->name+'.db';
+    this->dbfilename=(char*)_DB_ENV+(char*)this->name+'.db'; //fix
    // this->dbfilename=os.path.join(_DB_ENV,(char)this->name+'.db');
-    auto dbtype= db.DB_RECNO;
+    auto dbtype= db.DB_RECNO; //fix
     this->db.open(this->dbfilename,NULL,dbtype,flags);
-    this->stat = this->db.stat(db.DB_FAST_STAT);
-    this->last = this->stat['ndata']
+    this->stat = this->db.stat(db.DB_FAST_STAT); //fix
+    this->last = this->stat['ndata'] //fix
     this->closed = false;
 }
 /**
@@ -327,7 +330,7 @@ void HeapFile::create(void){
 void HeapFile::drop(void){
 
     this->close();
-    remove((char*)this->dbfilename);
+    remove((char*)this->dbfilename); //fix
 }
 
 /**
@@ -335,7 +338,7 @@ void HeapFile::drop(void){
  */
 void HeapFile::open(void){
     this->db_open();
-    this->block_size= this->stat['re-len'];//??
+    this->block_size= this->stat['re-len'];//?? //fix
 
 }
 
@@ -343,7 +346,7 @@ void HeapFile::open(void){
  * Close the physical file.
  */
 void HeapFile::close(void){
-    this->db.close();
+    this->db.close(); //Fix
     this->closed= true;
 }
 
@@ -373,7 +376,7 @@ SlottedPage* HeapFile::get_new(void){
  * @return
  */
 SlottedPage* HeapFile::get(BlockID block_id){
-    return SlottedPage(this->db.get(block_id),block_id);
+    return SlottedPage(this->db.get(block_id),block_id); //Fix
 }
 
 /**
@@ -381,7 +384,7 @@ SlottedPage* HeapFile::get(BlockID block_id){
  * @param block
  */
 void HeapFile::put(DbBlock *block){
-    this->db.put(block->get_block_id(),to_bytes(block->get_block()))
+    this->db.put(block->get_block_id(),to_bytes(block->get_block())) //Fix
 }
 
 /**
@@ -409,7 +412,7 @@ BlockIDs* HeapFile::block_ids(){
  * @param column_attributes
  */
 HeapTable::HeapTable(Identifier table_name, ColumnNames column_names, ColumnAttributes column_attributes){
-    /* FIXME FIXME FIXME */
+    /* FIXME FIXME FIXME */ //Fix
 }
 
 
@@ -425,7 +428,7 @@ void HeapTable::create_if_not_exists(){
 
     try {
         this->open();
-    } catch (db->DBNoSuchFileError) {
+    } catch (db->DBNoSuchFileError) { //Fix
         this->create();
     }
 } // TODO
@@ -435,7 +438,7 @@ void HeapTable::create_if_not_exists(){
  */
 void HeapTable::drop(){
     this->file.drop();
-} // TODO
+}
 
 /**
  *
@@ -443,7 +446,7 @@ void HeapTable::drop(){
 void HeapTable::open(){
 
     this->file.open();
-} // TODO
+}
 
 /**
  *
@@ -451,7 +454,7 @@ void HeapTable::open(){
 void HeapTable::close(){
 
     this->file.close();
-} // TODO
+}
 
 /**
  *
@@ -462,7 +465,7 @@ Handle HeapTable::insert(const ValueDict *row){
 
     this->open();
     return this->append(this->validate(row));
-} // TODO
+}
 
 /**
  *
@@ -534,7 +537,21 @@ ValueDict * HeapTable::project(Handle handle, const ColumnNames *column_names){
  * @return
  */
 ValueDict * HeapTable::validate(const ValueDict *row){
-    /* FIXME FIXME FIXME */
+    std::map<Identifier, Value> * full_row = {};
+    uint col_num = 0;
+    for(auto const& column_name: this->column_attributes){
+        ColumnAttribute ca = this->column_attributes[col_num++];
+        ValueDict::const_iterator column = row->find(column_name); //fix
+        Value value = column->second;
+        if (ca.get_data_type() != ColumnAttribute::DataType::INT && ca.get_data_type() != ColumnAttribute::DataType::TEXT){
+            throw DbRelationError("don't know how to handle NULLs, defaults, etc. yet");
+        }
+        else {
+            value = row[column_name]; //fix
+            full_row[column_name] = value; //fix
+        }
+    }
+    return full_row;
 }
 
 /**
@@ -543,7 +560,19 @@ ValueDict * HeapTable::validate(const ValueDict *row){
  * @return
  */
 Handle HeapTable::append(const ValueDict *row){
-    /* FIXME Not milestone2 */
+    ValueDict *data = this->marshal(row); //Fix
+    SlottedPage *block = this->file..get_last_block_id(); //Fix
+    u_int16_t record_id;
+    try {
+        record_id = block->add(data); //Fix
+    } catch (DbRelationError) {
+        block = this->file.get_new();
+        record_id = block->add(data); //Fix
+    }
+    this->file.put(block);
+    unsigned int id = this->file.get_last_block_id();
+    std::pair<BlockID, RecordID> Handle (id, record_id);
+    return Handle;
 }
 
 /**
@@ -585,5 +614,20 @@ Dbt * HeapTable::marshal(const ValueDict *row){
  * @return
  */
 ValueDict * HeapTable::unmarshal(Dbt *data){
-    /* FIXME Not milestone2 */
+    std::map<Identifier, Value> * row = {};
+    uint offset = 0;
+    uint col_num = 0;
+    for (auto const& column_name: this->column_names) {
+        ColumnAttribute ca = this->column_attributes[col_num++];
+        ValueDict::const_iterator column = row->find(column_name);
+        Value value = column->second;
+        if (ca.get_data_type() == ColumnAttribute::DataType::INT) {
+
+        } else if (ca.get_data_type() == ColumnAttribute::DataType::TEXT) {
+
+        } else {
+            throw DbRelationError("Only know how to marshal INT and TEXT");
+        }
+    }
+    return row;
 }
