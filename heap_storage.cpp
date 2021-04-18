@@ -46,8 +46,7 @@ bool test_heap_storage() {
     if (value.s != "Hello!")
         return false;
     table.drop();
-
-
+    return true;
 }
 
 typedef u_int16_t u16;
@@ -236,7 +235,7 @@ void SlottedPage::slide(u_int16_t start, u_int16_t end){
     if(shift==0){
         return;
     }
-    //slide data ??
+    //void *memcpy(void *dest, const void * src, size_t n)   void * source can't be null
     memcpy(this->address(this->end_free+1+shift),memcpy(this->address(this->end_free+1),NULL,start),end);
 
     //fix headers
@@ -307,12 +306,12 @@ void HeapFile::db_open(uint flags){
     this->db=db.Db();         //->block_size
     this->db.set_re_len(this->db.block_size); //fix
     //QString path =
-    this->dbfilename=(char*)_DB_ENV+(char*)this->name+'.db'; //fix
+    this->dbfilename=(char*)_DB_ENV+(char*)this->name+".db"; //fix
    // this->dbfilename=os.path.join(_DB_ENV,(char)this->name+'.db');
     auto dbtype = db.DB_RECNO; //fix
     this->db.open(this->dbfilename,NULL,dbtype,flags);
     this->db.stat = this->db.stat(db.DB_FAST_STAT); //fix
-    this->last = this->db.stat['ndata'] //fix
+    this->last = this->db.stat["ndata"] //fix
     this->closed = false;
 }
 /**
@@ -338,7 +337,7 @@ void HeapFile::drop(void){
  */
 void HeapFile::open(void){
     this->db_open();
-    this->block_size= this->db.stat['re-len'];//?? //fix
+    this->block_size= this->db.stat["re-len"];//?? //fix
 
 }
 
@@ -411,11 +410,12 @@ BlockIDs* HeapFile::block_ids(){
  * @param column_names
  * @param column_attributes
  */
+ /*
 HeapTable::HeapTable(Identifier table_name, ColumnNames column_names, ColumnAttributes column_attributes){
     DbRelation(table_name, column_names, column_attributes);
     this->file = HeapFile(table_name, DbBlock::BLOCK_SZ);
 }
-
+*/
 
 void HeapTable::create(){
 
@@ -429,7 +429,7 @@ void HeapTable::create_if_not_exists(){
 
     try {
         this->open();
-    } catch (DbRelationError) { //Fix
+    } catch (DbRelationError const&) {
         this->create();
     }
 } // TODO
@@ -472,26 +472,30 @@ Handle HeapTable::insert(const ValueDict *row){
  *
  * @param handle
  * @param new_values
- */
+ *//*
 void HeapTable::update(const Handle handle, const ValueDict *new_values){
-    /* FIXME Not milestone2 */
+    *//* FIXME Not milestone2 *//*
 }
 
-/**
+*//**
  *
  * @param handle
- */
+ *//*
 void HeapTable::del(const Handle handle){
-    /* FIXME Not milestone2 */
-}
+    *//* FIXME Not milestone2 *//*
+}*/
 
 /**
  *
  * @return
- */
+ *//*
+
 Handles * HeapTable::select(){
-    /* FIXME Not milestone2 */
+    */
+/* FIXME Not milestone2 *//*
+
 }
+*/
 
 /**
  *
@@ -513,24 +517,25 @@ Handles * HeapTable::select(const ValueDict *where){
     return handles;
 }
 
+
 /**
  *
  * @param handle
  * @return
- */
+ *//*
 ValueDict * HeapTable::project(Handle handle){
-    /* FIXME Not milestone2 */
-}
+    *//* FIXME Not milestone2 *//*
+}*/
 
 /**
  *
  * @param handle
  * @param column_names
  * @return
- */
+ *//*
 ValueDict * HeapTable::project(Handle handle, const ColumnNames *column_names){
-    /* FIXME Not milestone2 */
-}
+    *//* FIXME Not milestone2 *//*
+}*/
 
 /**
  *
@@ -566,7 +571,7 @@ Handle HeapTable::append(const ValueDict *row){
     u_int16_t record_id;
     try {
         record_id = block->add(data);
-    } catch (DbRelationError) {
+    } catch (DbRelationError const&) {
         block = this->file.get_new();
         record_id = block->add(data);
     }
@@ -616,7 +621,7 @@ Dbt * HeapTable::marshal(const ValueDict *row){
  */
 ValueDict * HeapTable::unmarshal(Dbt *data){
     std::map<Identifier, Value> * row = {};
-    uint offset = 0;
+    // uint offset = 0;
     uint col_num = 0;
     for (auto const& column_name: this->column_names) {
         ColumnAttribute ca = this->column_attributes[col_num++];
