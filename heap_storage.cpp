@@ -621,19 +621,23 @@ Dbt * HeapTable::marshal(const ValueDict *row){
  */
 ValueDict * HeapTable::unmarshal(Dbt *data){
     std::map<Identifier, Value> * row = {};
-    // uint offset = 0;
+    char *bytes = new char[DbBlock::BLOCK_SZ];
+    uint offset = 0;
     uint col_num = 0;
     for (auto const& column_name: this->column_names) {
         ColumnAttribute ca = this->column_attributes[col_num++];
         ValueDict::const_iterator column = row->find(column_name);
         Value value = column->second;
         if (ca.get_data_type() == ColumnAttribute::DataType::INT) {
-
+            value.n = *(int32_t*) (bytes + offset);
+            offset += sizeof(int32_t);
         } else if (ca.get_data_type() == ColumnAttribute::DataType::TEXT) {
 
         } else {
             throw DbRelationError("Only know how to marshal INT and TEXT");
         }
+        (*row)[column_name] = value;
     }
+    delete[] bytes;
     return row;
 }
