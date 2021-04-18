@@ -8,6 +8,7 @@
 #include <utility>
 #include <vector>
 #include "db_cxx.h"
+#define M_ToCharPtr(p)
 
 
 bool test_heap_storage() {
@@ -240,15 +241,19 @@ void SlottedPage::slide(u_int16_t start, u_int16_t end){
 
     //fix headers
 
-    RecordIDs::iterator<RecordID> id; //fix
-
-    for(id = this->ids()->begin(); id != this->ids()->end(); ++id){
+    //RecordID::iterator id; //fix
+    /*
+    for(int i=0;i< this->ids()->size();i++){
+        this->ids()[i]
+    }
+     */
+    for(int i=0;i< this->ids()->size();i++){
         u_int16_t size=this->num_records;
         u_int16_t loc=this->end_free;
-        this->get_header(size, loc,id); //fix
+        this->get_header(size, loc,this->ids()->at(i)); //fix
         if(loc<=start){
             loc +=shift;
-            this->put_header(id,size,loc); //fix
+            this->put_header(this->ids()->at(i),size,loc); //fix
         }
     }
 
@@ -290,12 +295,12 @@ void* SlottedPage::address(u16 offset) {
  * _______________________HEAP FILE_________________________________________
  */
 
-/*
+
 HeapFile::HeapFile(std::string name) : DbFile(name), dbfilename(""), last(0), closed(true), db(_DB_ENV, 0) { //fix
     this->block_size= sizeof(name);//??
 
 }
-*/
+
 
 //Wrapper for Berkeley DB open, which does both open and creation.
 void HeapFile::db_open(uint flags){
@@ -304,21 +309,21 @@ void HeapFile::db_open(uint flags){
         return;
     }
     this->db=db.Db();         //->block_size
-    this->db.set_re_len(this->db.block_size); //fix
+    this->db.set_re_len(this->block_size); //fix
     //QString path =
-    this->dbfilename=(char*)_DB_ENV+(char*)this->name+".db"; //fix
+    this->dbfilename=(char*)_DB_ENV+this->name+".db"; //fix
    // this->dbfilename=os.path.join(_DB_ENV,(char)this->name+'.db');
-    auto dbtype = db.DB_RECNO; //fix
+    auto dbtype = DB_RECNO; //fix
     this->db.open(this->dbfilename,NULL,dbtype,flags);
-    this->db.stat = this->db.stat(db.DB_FAST_STAT); //fix
-    this->last = this->db.stat["ndata"] //fix
+    this->stat = this->db.stat(db.DB_FAST_STAT); //fix
+    this->last = this->stat["ndata"] //fix
     this->closed = false;
 }
 /**
  * Create physical file.
  */
 void HeapFile::create(void){
-    this->db_open(db.DB_CREATE | db.DB_EXCL);
+    this->db_open(DB_CREATE | DB_EXCL);
     auto block = this->get_new(); //first block of the file
     this->put(block);
 }
@@ -329,7 +334,8 @@ void HeapFile::create(void){
 void HeapFile::drop(void){
 
     this->close();
-    remove((char*)this->dbfilename); //fix
+    remove((char*)this->dbfilename);
+    //remove(""+(char)this->dbfilename); //fix
 }
 
 /**
@@ -337,7 +343,7 @@ void HeapFile::drop(void){
  */
 void HeapFile::open(void){
     this->db_open();
-    this->block_size= this->db.stat["re-len"];//?? //fix
+    this->block_size= this->stat["re-len"];//?? //fix
 
 }
 
@@ -345,7 +351,7 @@ void HeapFile::open(void){
  * Close the physical file.
  */
 void HeapFile::close(void){
-    this->db.close(); //Fix
+    this->db.close(0); //Fix
     this->closed= true;
 }
 
