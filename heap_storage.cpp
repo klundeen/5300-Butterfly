@@ -295,11 +295,12 @@ void* SlottedPage::address(u16 offset) {
  * _______________________HEAP FILE_________________________________________
  */
 
-
+/*
 HeapFile::HeapFile(std::string name) : DbFile(name), dbfilename(""), last(0), closed(true), db(_DB_ENV, 0) { //fix
     this->block_size= sizeof(name);//??
 
 }
+ */
 
 
 //Wrapper for Berkeley DB open, which does both open and creation.
@@ -314,7 +315,7 @@ void HeapFile::db_open(uint flags){
     this->dbfilename=(char*)_DB_ENV+this->name+".db"; //fix
    // this->dbfilename=os.path.join(_DB_ENV,(char)this->name+'.db');
     auto dbtype = DB_RECNO; //fix
-    this->db.open(this->dbfilename,NULL,dbtype,flags);
+    this->db.open(NULL,this->dbfilename,NULL,dbtype,flags,NULL);
     this->db.stat = this->db.stat(db.DB_FAST_STAT); //fix
     this->last = this->db.stat["ndata"] //fix
     this->closed = false;
@@ -343,7 +344,7 @@ void HeapFile::drop(void){
  */
 void HeapFile::open(void){
     this->db_open();
-    this->block_size= this->db.stat["re-len"];//?? //fix
+    this->block_size=this->db.stat["re-len"];//?? //fix
 
 }
 
@@ -389,7 +390,11 @@ SlottedPage* HeapFile::get(BlockID block_id){
  * @param block
  */
 void HeapFile::put(DbBlock *block){
-    this->db.put(block->get_block_id(),to_bytes(block->get_block())) //Fix
+   // this->db.put(block->get_block_id(),to_bytes(block->get_block())) //Fix
+    char *bytes =new char[DbBlock::BLOCK_SZ];
+    bytes =(char*) block->get_block();
+    this->db.put(block->get_block_id(),bytes) //Fix
+    delete bytes;
 }
 
 /**
