@@ -9,6 +9,7 @@
 #include <vector>
 #include "db_cxx.h"
 #define M_ToCharPtr(p)
+#define DB_FAST_STAT
 
 
 bool test_heap_storage() {
@@ -556,7 +557,7 @@ ValueDict * HeapTable::project(Handle handle, const ColumnNames *column_names){
 ValueDict * HeapTable::validate(const ValueDict *row){
     std::map<Identifier, Value> * full_row = {};
     uint col_num = 0;
-    for(auto const& column_name: this->column_attributes){
+    for(auto const& column_name: column_names){
         ColumnAttribute ca = this->column_attributes[col_num++];
         ValueDict::const_iterator column = row->find(column_name); //fix
         Value value = column->second;
@@ -564,8 +565,11 @@ ValueDict * HeapTable::validate(const ValueDict *row){
             throw DbRelationError("don't know how to handle NULLs, defaults, etc. yet");
         }
         else {
-            value = row[column_name]; //fix
-            full_row[column_name] = value; //fix
+            value = row->at(column_name);
+            full_row->at(column_name) = value;
+
+            //value = row[column_name]; //fix
+            //full_row[column_name] = value; //fix
         }
     }
     return full_row;
