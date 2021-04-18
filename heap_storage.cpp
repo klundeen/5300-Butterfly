@@ -315,8 +315,8 @@ void HeapFile::db_open(uint flags){
    // this->dbfilename=os.path.join(_DB_ENV,(char)this->name+'.db');
     auto dbtype = DB_RECNO; //fix
     this->db.open(this->dbfilename,NULL,dbtype,flags);
-    this->stat = this->db.stat(db.DB_FAST_STAT); //fix
-    this->last = this->stat["ndata"] //fix
+    this->db.stat = this->db.stat(db.DB_FAST_STAT); //fix
+    this->last = this->db.stat["ndata"] //fix
     this->closed = false;
 }
 /**
@@ -343,7 +343,7 @@ void HeapFile::drop(void){
  */
 void HeapFile::open(void){
     this->db_open();
-    this->block_size= this->stat["re-len"];//?? //fix
+    this->block_size= this->db.stat["re-len"];//?? //fix
 
 }
 
