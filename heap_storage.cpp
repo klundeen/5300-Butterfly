@@ -298,10 +298,11 @@ void* SlottedPage::address(u16 offset) {
 
 /*
 HeapFile::HeapFile(std::string name) : DbFile(name), dbfilename(""), last(0), closed(true), db(_DB_ENV, 0) { //fix
-    this->block_size= sizeof(name);//??
+    this->block_size=sizeof(name);//??
 
 }
  */
+
 
 
 //Wrapper for Berkeley DB open, which does both open and creation.
@@ -316,9 +317,11 @@ void HeapFile::db_open(uint flags){
     this->dbfilename=(char*)_DB_ENV+this->name+".db"; //fix
    // this->dbfilename=os.path.join(_DB_ENV,(char)this->name+'.db');
     auto dbtype = DB_RECNO; //fix
-    this->db.open(NULL,this->dbfilename,NULL,dbtype,flags,NULL);
+    //Db::open(DbTxn *txnid, const char *file,
+    //const char *database, DBTYPE type, u_int32_t flags, int mode);
+    this->db.open(NULL,(char*)this->dbfilename,NULL,dbtype,flags,0);
     this->db.stat = this->db.stat(db.DB_FAST_STAT); //fix
-    this->last = this->db.stat["ndata"] //fix
+    this->last = this->db.stat(NULL,NULL,(u_int32_t)'ndata'); //fix
     this->closed = false;
 }
 /**
@@ -345,7 +348,7 @@ void HeapFile::drop(void){
  */
 void HeapFile::open(void){
     this->db_open();
-    this->block_size=this->db.stat["re-len"];//?? //fix
+    this->block_size=this->db.stat(NULL,NULL,(u_int32_t)'re_len');//?? //fix
 
 }
 
@@ -383,7 +386,9 @@ SlottedPage* HeapFile::get_new(void){
  * @return
  */
 SlottedPage* HeapFile::get(BlockID block_id){
-    return SlottedPage(this->db.get(block_id),block_id); //Fix
+    //Db::get(DbTxn *txnid, Dbt *key, Dbt *data, u_int32_t flags);
+
+    return SlottedPage((Dbt*)this->db.get((DbTxn*)block_id,NULL,NULL,0),block_id, false); //Fix
 }
 
 /**
@@ -394,7 +399,8 @@ void HeapFile::put(DbBlock *block){
    // this->db.put(block->get_block_id(),to_bytes(block->get_block())) //Fix
     char *bytes =new char[DbBlock::BLOCK_SZ];
     bytes =(char*) block->get_block();
-    this->db.put(block->get_block_id(),bytes) //Fix
+    //Db::put(DbTxn *txnid, Dbt *key, Dbt *data, u_int32_t flags);
+    this->db.put((DbTxn*)block->get_block_id(),NULL,(Dbt*)bytes,0); //Fix
     delete bytes;
 }
 
