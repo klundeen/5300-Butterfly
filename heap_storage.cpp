@@ -9,7 +9,7 @@
 #include <vector>
 #include "db_cxx.h"
 #define M_ToCharPtr(p)
-#define DB_FAST_STAT
+
 
 
 bool test_heap_storage() {
@@ -248,7 +248,7 @@ void SlottedPage::slide(u_int16_t start, u_int16_t end){
         this->ids()[i]
     }
      */
-    for(int i=0;i< this->ids()->size();i++){
+    for(u16 i=0;i< this->ids()->size();i++){
         u_int16_t size=this->num_records;
         u_int16_t loc=this->end_free;
         this->get_header(size, loc,this->ids()->at(i)); //fix
@@ -298,10 +298,13 @@ void* SlottedPage::address(u16 offset) {
 
 /*
 HeapFile::HeapFile(std::string name) : DbFile(name), dbfilename(""), last(0), closed(true), db(_DB_ENV, 0) { //fix
+protected:
     this->block_size=sizeof(name);//??
 
 }
  */
+
+
 
 
 
@@ -312,15 +315,16 @@ void HeapFile::db_open(uint flags){
         return;
     }
     this->db=db.Db();         //->block_size
-    this->db.set_re_len(this->block_size); //fix
+    this->db.set_re_len(this->block_size)); //fix
     //QString path =
     this->dbfilename=(char*)_DB_ENV+this->name+".db"; //fix
    // this->dbfilename=os.path.join(_DB_ENV,(char)this->name+'.db');
     auto dbtype = DB_RECNO; //fix
     //Db::open(DbTxn *txnid, const char *file,
     //const char *database, DBTYPE type, u_int32_t flags, int mode);
-    this->db.open(NULL,(char*)this->dbfilename,NULL,dbtype,flags,0);
-    this->db.stat = this->db.stat(db.DB_FAST_STAT); //fix
+    const char * fileName = this->dbfilename.c_str();
+    this->db.open(NULL,fileName,NULL,dbtype,flags,0);
+    this->db.stat = this->db.stat(NULL,NULL,db.DB_FAST_STAT); //fix
     this->last = this->db.stat(NULL,NULL,(u_int32_t)'ndata'); //fix
     this->closed = false;
 }
@@ -339,7 +343,8 @@ void HeapFile::create(void){
 void HeapFile::drop(void){
 
     this->close();
-    remove((char*)this->dbfilename);
+    const char * fileName = this->dbfilename.c_str();
+    remove(fileName);
     //remove(""+(char)this->dbfilename); //fix
 }
 
@@ -388,7 +393,7 @@ SlottedPage* HeapFile::get_new(void){
 SlottedPage* HeapFile::get(BlockID block_id){
     //Db::get(DbTxn *txnid, Dbt *key, Dbt *data, u_int32_t flags);
 
-    return SlottedPage((Dbt*)this->db.get((DbTxn*)block_id,NULL,NULL,0),block_id, false); //Fix
+    return SlottedPage((Dbt*)this->db.get((DbTxn*)block_id,NULL,NULL,0),block_id); //Fix
 }
 
 /**
