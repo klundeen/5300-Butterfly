@@ -296,13 +296,13 @@ void* SlottedPage::address(u16 offset) {
  * _______________________HEAP FILE_________________________________________
  */
 
-/*
-HeapFile::HeapFile(std::string name) : DbFile(name), dbfilename(""), last(0), closed(true), db(_DB_ENV, 0) { //fix
-protected:
-    this->block_size=sizeof(name);//??
+
+HeapFile::HeapFile(std::string name,uint32_t block_size){//fix
+    this->name=name;
+    this->block_size=block_size;//??
 
 }
- */
+
 
 
 
@@ -393,7 +393,7 @@ SlottedPage* HeapFile::get_new(void){
 SlottedPage* HeapFile::get(BlockID block_id){
     //Db::get(DbTxn *txnid, Dbt *key, Dbt *data, u_int32_t flags);
 
-    return SlottedPage((Dbt*)this->db.get((DbTxn*)block_id,NULL,NULL,0),block_id); //Fix
+    return SlottedPage((Dbt&)this->db.get((DbTxn*)block_id,NULL,NULL,0),block_id); //Fix
 }
 
 /**
