@@ -78,17 +78,12 @@ RecordID SlottedPage::add(const Dbt *data) {
  * @return Return Dbt * or None if it has been deleted.
  */
 Dbt *SlottedPage::get(RecordID record_id) {
-
-    u16 size = (u16) this->num_records;
-    u16 loc = (u16) this->end_free;
-    this->get_header(size, loc, record_id);
-    if (loc == 0) {
-        return NULL;
+    u16 size, loc;
+    get_header(size, loc, record_id);
+    if (loc == 0){
+        return nullptr;
     }
-    //?? data->get_data() , how to unmarshall?
-    return (Dbt *) memcpy(this->address(loc), NULL, size);
-    //return memcpy(this->address(loc),Null, size); ?
-
+    return new Dbt(this->address(loc), size);
 }
 
 /**
@@ -264,17 +259,6 @@ void *SlottedPage::address(u16 offset) {
  */
 
 /**
- * Constructor for HeapFile.
- * @param name std::string name for file.
- * @param block_size.
- */
-HeapFile::HeapFile(std::string name, uint32_t block_size) {//fix
-    this->name = name;
-    this->block_size = block_size;//??
-
-}
-
-/**
  * Wrapper for Berkeley DB open, which does both open and creation.
  * @param flags uint flags for db.
  */
@@ -283,8 +267,7 @@ void HeapFile::db_open(uint flags) {
     if (this->closed == false) {
         return;
     }
-    this->db = db.Db();         //->block_size
-    this->db.set_re_len(this->block_size)); //fix
+    this->db.set_re_len(DbBlock::BLOCK_SZ); //fix
     //QString path =
     this->dbfilename = (char *) _DB_ENV + this->name + ".db"; //fix
     // this->dbfilename=os.path.join(_DB_ENV,(char)this->name+'.db');
@@ -293,7 +276,7 @@ void HeapFile::db_open(uint flags) {
     //const char *database, DBTYPE type, u_int32_t flags, int mode);
     const char *fileName = this->dbfilename.c_str();
     this->db.open(NULL, fileName, NULL, dbtype, flags, 0);
-    this->db.stat = this->db.stat(NULL, NULL, db.DB_FAST_STAT); //fix
+    db.stat(NULL, NULL, DB_FAST_STAT); //fix
     this->last = this->db.stat(NULL, NULL, (u_int32_t) 'ndata'); //fix
     this->closed = false;
 }
@@ -323,7 +306,7 @@ void HeapFile::drop(void) {
  */
 void HeapFile::open(void) {
     this->db_open();
-    this->block_size = this->db.stat(NULL, NULL, (u_int32_t) 're_len');//?? //fix
+    //this->block_size = this->db.stat(NULL, NULL, (u_int32_t) 're_len');//?? //fix
 
 }
 
@@ -404,7 +387,7 @@ BlockIDs *HeapFile::block_ids() {
  * @param column_attributes ColumnAttributes vector of ColumnAttributes.
  */
 
-HeapTable::HeapTable(Identifier table_name, ColumnNames column_names, ColumnAttributes column_attributes){
+HeapTable::HeapTable(Identifier table_name, ColumnNames column_names, ColumnAttributes column_attributes) : DbRelation(table_name, column_names, column_attributes), file(table_name) {
 }
 
 
