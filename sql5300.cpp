@@ -1,7 +1,10 @@
-//
-// Created by jarak on 4/6/2021.
-// CPSC-5300 Butterfly ,Sprint Verano: Shrividya Ballapadavu, Jara Lindsay
-//
+/**
+ * CPSC-5300 Butterfly ,Sprint Verano:
+ * @file sql5300.cpp - Main entry for the relation manager's SQL shell
+ * @author Shrividya Ballapadavu, Jara Lindsay
+ * @author Kevin Lundeen, Supplied starting components
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

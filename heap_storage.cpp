@@ -1,3 +1,10 @@
+/**
+ * CPSC-5300 Butterfly ,Sprint Verano:
+ * @file heap_storage.cpp - Heap Storage Engine components
+ * @author Shrividya Ballapadavu, Jara Lindsay
+ * @author Kevin Lundeen, Supplied starting components
+ */
+
 #include "heap_storage.h"
 #include <stdio.h>
 #include <iostream>
@@ -621,9 +628,9 @@ ValueDict *HeapTable::unmarshal(Dbt *data) {
     uint offset = 0;
     uint col_num = 0;
     for (auto const &column_name: this->column_names) {
-        ColumnAttribute ca = this->column_attributes[col_num++];
-        ValueDict::const_iterator column = row->find(column_name);
-        Value value = column->second;
+        ColumnAttribute ca = this->column_attributes[col_num++]; //fix
+        ValueDict::const_iterator column = row->find(column_name); //fix
+        Value value = column->second; //fix
         if (ca.get_data_type() == ColumnAttribute::DataType::INT) {
             value.n = *(int32_t * )(bytes + offset);
             offset += sizeof(int32_t);
