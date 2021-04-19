@@ -403,12 +403,10 @@ BlockIDs *HeapFile::block_ids() {
  * @param column_names ColumnNames vector of identifiers.
  * @param column_attributes ColumnAttributes vector of ColumnAttributes.
  */
-/*
+
 HeapTable::HeapTable(Identifier table_name, ColumnNames column_names, ColumnAttributes column_attributes){
-   DbRelation(table_name, column_names, column_attributes);
-   this->file = HeapFile(table_name, DbBlock::BLOCK_SZ);
 }
-*/
+
 
 /**
  * Execute: CREATE TABLE <table_name> ( <columns> )
@@ -554,7 +552,6 @@ ValueDict *HeapTable::validate(const ValueDict *row) {
             throw DbRelationError("don't know how to handle NULLs, defaults, etc. yet");
         } else {
             value = row->at(column_name);
-            full_row->at(column_name) = value;
 
             //value = row[column_name]; //fix
             //full_row[column_name] = value; //fix
@@ -625,23 +622,36 @@ Dbt *HeapTable::marshal(const ValueDict *row) {
 ValueDict *HeapTable::unmarshal(Dbt *data) {
     std::map <Identifier, Value> *row = {};
     char *bytes = new char[DbBlock::BLOCK_SZ];
+    char *buffer = new char[DbBlock::BLOCK_SZ];
     uint offset = 0;
     uint col_num = 0;
+    Value value;
     for (auto const &column_name: this->column_names) {
         ColumnAttribute ca = this->column_attributes[col_num++]; //fix
-        ValueDict::const_iterator column = row->find(column_name); //fix
-        Value value = column->second; //fix
+        //ValueDict::const_iterator column = row->find(column_name); //fix
+        //Value value = column->second; //fix
         if (ca.get_data_type() == ColumnAttribute::DataType::INT) {
-            value.n = *(int32_t * )(bytes + offset);
-            offset += sizeof(int32_t);
+            u16 size = *(u16 *) (bytes + offset);
+            offset += sizeof(u16);
+            memcpy(buffer, bytes + offset, size);
+            buffer[size] = '\0';
+            value.n = *(int32_t*)buffer;
+            offset += size;
         } else if (ca.get_data_type() == ColumnAttribute::DataType::TEXT) {
-
+                u16 size = *(u16 *) (bytes + offset);
+                offset += sizeof(u16);
+                char buffer[DbBlock::BLOCK_SZ];
+                memcpy(buffer, bytes + offset, size);
+                buffer[size] = '\0';
+                value.s = std::string(buffer);
+                offset += size;
         } else {
             throw DbRelationError("Only know how to marshal INT and TEXT");
         }
         (*row)[column_name] = value;
     }
     delete[] bytes;
+    delete[] buffer;
     return row;
 }
 
