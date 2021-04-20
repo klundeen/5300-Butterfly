@@ -140,7 +140,6 @@ RecordIDs *SlottedPage::ids(void) {
         if (loc != 0) {
             ids->push_back(i);
         }
-
     }
     return ids;
 }
@@ -432,7 +431,6 @@ void HeapTable::drop() {
  * Open existing table. Enables: insert, update, delete, select, project.
  */
 void HeapTable::open() {
-
     this->file.open();
 }
 
@@ -463,20 +461,22 @@ Handle HeapTable::insert(const ValueDict *row) {
  * or select).
  * @param handle BlockID RecordID pair to identify record.
  * @param new_values ValueDict * Map of Identifiers and Values.
- *//*
+ */
 void HeapTable::update(const Handle handle, const ValueDict *new_values){
-    *//* FIXME Not milestone2 *//*
-}*/
+    /* FIXME Not milestone2: Added element to compile, please delete & implement */
+    this->open();
+}
 
 /**
  * Conceptually, execute: DELETE FROM <table_name> WHERE <handle>
  * where handle is sufficient to identify one specific record (e.g., returned from an insert
  * or select).
  * @param handle BlockID RecordID pair to identify record.
- *//*
+ */
 void HeapTable::del(const Handle handle){
-    *//* FIXME Not milestone2 *//*
-}*/
+    /* FIXME Not milestone2: Added element to compile, please delete & implement */
+    this->open();
+}
 
 /**
  * Conceptually, execute: SELECT <handle> FROM <table_name> WHERE <where>
@@ -484,7 +484,18 @@ void HeapTable::del(const Handle handle){
  */
 
 Handles * HeapTable::select(){
-    //fix
+    Handles *handles = new Handles();
+    BlockIDs *block_ids = file.block_ids();
+    for (auto const &block_id: *block_ids) {
+        SlottedPage *block = file.get(block_id);
+        RecordIDs *record_ids = block->ids();
+        for (auto const &record_id: *record_ids)
+            handles->push_back(Handle(block_id, record_id));
+        delete record_ids;
+        delete block;
+    }
+    delete block_ids;
+    return handles;
 }
 
 /**
@@ -511,10 +522,12 @@ Handles *HeapTable::select(const ValueDict *where) {
  * Return a sequence of values for handle given by column_names.
  * @param handle BlockID RecordID pair.
  * @return ValueDict * Map of Identifiers and Values.
- *//*
+ */
 ValueDict * HeapTable::project(Handle handle){
-    *//* FIXME Not milestone2 *//*
-}*/
+    /* FIXME Not milestone2: Added element to compile, please delete & implement */
+    ValueDict *valuedict = new ValueDict();
+    return valuedict;
+}
 
 /**
  * Return a sequence of values for handle given by column_names.
@@ -522,11 +535,13 @@ ValueDict * HeapTable::project(Handle handle){
  * @param column_names ColumnNames * vector of Identifiers
  * @return ValueDict * Map of Identifiers and Values.
  */
- /*
+
 ValueDict * HeapTable::project(Handle handle, const ColumnNames *column_names){
-    /* FIXME Not milestone2 *//*
+    /* FIXME Not milestone2: Added element to compile, please delete & implement */
+    ValueDict *valuedict = new ValueDict();
+    return valuedict;
 }
-*/
+
 
 /**
  * Check if the given row is acceptable to insert. Raise ValueError if not.
