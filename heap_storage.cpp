@@ -696,10 +696,9 @@ bool test_heap_storage() {
     std::cout << "drop ok" << std::endl;
 
     HeapTable table("_test_data_cpp", column_names, column_attributes);
-    std::cout << "going into create if not exist" << std::endl;
     table.create_if_not_exists();
-    std::cout << "create_if_not_exsts ok" << std::endl;
-    /*
+    std::cout << "create_if_not_exists ok" << std::endl;
+
     ValueDict row;
     row["a"] = Value(12);
     row["b"] = Value("Hello!");
@@ -708,6 +707,7 @@ bool test_heap_storage() {
     std::cout << "insert ok" << std::endl;
     Handles *handles = table.select();
     std::cout << "select ok " << handles->size() << std::endl;
+
     /*
     ValueDict *result = table.project((*handles)[0]);
 
