@@ -307,7 +307,7 @@ void HeapFile::drop(void) {
  * Open physical file.
  */
 void HeapFile::open(void) {
-    this->db_open();
+    this->db_open(DB_CREATE);
     //this->block_size = this->db.stat(NULL, NULL, (u_int32_t) 're_len');//?? //fix
 
 }
@@ -412,8 +412,11 @@ void HeapTable::create() {
 void HeapTable::create_if_not_exists() {
 
     try {
+        std::cout << "Opening" << std::endl;
         this->open();
+        std::cout << "Opening" << std::endl;
     } catch (DbRelationError const &) {
+        std::cout << "Creating" << std::endl;
         this->create();
     }
 }
@@ -687,15 +690,16 @@ bool test_heap_storage() {
 
     HeapTable table1("_test_create_drop_cpp", column_names, column_attributes);
     table1.create();
-    /*
+
     std::cout << "create ok" << std::endl;
     table1.drop();  // drop makes the object unusable because of BerkeleyDB restriction -- maybe want to fix this some day
     std::cout << "drop ok" << std::endl;
 
     HeapTable table("_test_data_cpp", column_names, column_attributes);
+    std::cout << "going into create if not exist" << std::endl;
     table.create_if_not_exists();
     std::cout << "create_if_not_exsts ok" << std::endl;
-
+    /*
     ValueDict row;
     row["a"] = Value(12);
     row["b"] = Value("Hello!");
