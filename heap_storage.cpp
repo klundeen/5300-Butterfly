@@ -359,17 +359,12 @@ SlottedPage *HeapFile::get(BlockID block_id) {
  * @param block DbBlock to write.
  */
 void HeapFile::put(DbBlock *block) {
-    // this->db.put(block->get_block_id(),to_bytes(block->get_block())) //Fix
+
     std::cout << "Heapfile put top" << std::endl;
-    char *bytes = new char[DbBlock::BLOCK_SZ];
-    bytes = (char *) block->get_block();
-    std::cout << "Heapfile bytes" << std::endl;
     BlockID block_id = block->get_block_id();
     Dbt key(&block_id, sizeof(block->get_block_id()));
-    //Dbt data()
-    //Db::put(DbTxn *txnid, Dbt *key, Dbt *data, u_int32_t flags);
-    this->db.put(nullptr,&key, (Dbt *) bytes, 0); //Fix
-    delete bytes;
+    this->db.put(nullptr,&key, (Dbt *) block->get_block(), 0); //Fix
+    std::cout<<"Completed put"<<std::endl;
 }
 
 /**
