@@ -50,3 +50,17 @@ Milestone 2:
     To test the heap_storage, type 'test'
     
     To exit the program type 'quit'
+    
+Handoff Summary: 
+    
+    Milestone 1 should compile and be working correctly 
+    
+    Milestone 2 should compile and be partially working 
+    
+    Moving forward: 
+    Please check this code against Kevin's working solution.
+    There is a Segmentation fault in the test_heap_storage() line 682 
+    
+    Areas of note are:
+    HeapTable: Validate, UnMarshal, Append
+    HeapFile: Put, Get
