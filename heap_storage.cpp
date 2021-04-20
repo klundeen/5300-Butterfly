@@ -265,21 +265,17 @@ void *SlottedPage::address(u16 offset) {
  * @param flags uint flags for db.
  */
 void HeapFile::db_open(uint flags) {
-
     if (this->closed == false) {
         return;
     }
-    this->db.set_re_len(DbBlock::BLOCK_SZ); //fix
-    //QString path =
-    this->dbfilename = (char *) _DB_ENV + this->name + ".db"; //fix
-    // this->dbfilename=os.path.join(_DB_ENV,(char)this->name+'.db');
-    auto dbtype = DB_RECNO; //fix
-    //Db::open(DbTxn *txnid, const char *file,
-    //const char *database, DBTYPE type, u_int32_t flags, int mode);
+    this->db.set_re_len(DbBlock::BLOCK_SZ);
+    this->dbfilename = (char *) _DB_ENV + this->name + ".db";
+    auto dbtype = DB_RECNO;
     const char *fileName = this->dbfilename.c_str();
     this->db.open(NULL, fileName, NULL, dbtype, flags, 0);
-    db.stat(NULL, NULL, DB_FAST_STAT); //fix
-    this->last = this->db.stat(NULL, NULL, (u_int32_t) 'ndata'); //fix
+    DB_BTREE_STAT *stat;
+    this->db.stat(nullptr, &stat, DB_FAST_STAT);
+    this->last = stat->bt_ndata;
     this->closed = false;
 }
 
@@ -287,9 +283,13 @@ void HeapFile::db_open(uint flags) {
  * Create physical file.
  */
 void HeapFile::create(void) {
+    std::cout << "Heapfile Create" << std::endl;
     this->db_open(DB_CREATE | DB_EXCL);
+    std::cout << "Heapfile open" << std::endl;
     auto block = this->get_new(); //first block of the file
+    std::cout << "Heapfile block" << std::endl;
     this->put(block);
+    std::cout << "Heapfile after block" << std::endl;
 }
 
 /**
@@ -360,9 +360,11 @@ SlottedPage *HeapFile::get(BlockID block_id) {
  */
 void HeapFile::put(DbBlock *block) {
     // this->db.put(block->get_block_id(),to_bytes(block->get_block())) //Fix
+    std::cout << "Heapfile put top" << std::endl;
     char *bytes = new char[DbBlock::BLOCK_SZ];
     bytes = (char *) block->get_block();
-    BlockID block_id=block->get_block_id();
+    std::cout << "Heapfile bytes" << std::endl;
+    BlockID block_id = block->get_block_id();
     Dbt key(&block_id, sizeof(block->get_block_id()));
     //Dbt data()
     //Db::put(DbTxn *txnid, Dbt *key, Dbt *data, u_int32_t flags);
