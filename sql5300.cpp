@@ -324,7 +324,7 @@ int main(int argc, char **argv) {
             break;
         }
         if (query == "test") {
-            std::cout<< "Got To Test\n" << std::endl;
+            std::cout << "Got To Test" << std::endl;
             std::cout << "test_heap_storage: " << (test_heap_storage() ? "ok" : "failed") << std::endl;
             continue;
         }
