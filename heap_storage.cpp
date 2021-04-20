@@ -284,7 +284,7 @@ void HeapFile::db_open(uint flags) {
  */
 void HeapFile::create(void) {
     std::cout << "Heapfile Create" << std::endl;
-    this->db_open(DB_CREATE | DB_EXCL);
+    this->db_open(DB_CREATE);
     std::cout << "Heapfile open" << std::endl;
     auto block = this->get_new(); //first block of the file
     std::cout << "Heapfile block" << std::endl;
@@ -400,8 +400,9 @@ HeapTable::HeapTable(Identifier table_name, ColumnNames column_names, ColumnAttr
  * Is not responsible for metadata storage or validation.
  */
 void HeapTable::create() {
-
+    std::cout <<"Made it to heaptable create" << std::endl;
     this->file.create();
+    std::cout <<"Made it to heapfile create" << std::endl;
 }
 
 /**
