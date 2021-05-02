@@ -65,4 +65,5 @@ Handoff Summary:
     HeapTable: Validate, UnMarshal, Append
     HeapFile: Put, Get
     
-# Otono Sprint: Nicholas Nguyen, Yinying Liang
+# Otono Sprint:
+Nicholas Nguyen, Yinying Liang
