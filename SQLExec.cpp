@@ -17,6 +17,8 @@ using namespace hsql;
 // define static data
 //uses the same instance of th table class, avoid re-instantiating
 Tables *SQLExec::tables = nullptr;
+Indices *SQLExec::indices = nullptr;
+
 
 // make query result be printable
 ostream &operator<<(ostream &out, const QueryResult &qres)
@@ -129,101 +131,102 @@ void SQLExec::column_definition(const ColumnDefinition *col, Identifier &column_
   }
 }
 
+
 /**
- *Create table
- *@param: sql statement
- *@return: sql create query result
+ *Exceution of create_table
  */
 QueryResult *SQLExec::create(const CreateStatement *statement)
 {
 
-  if (statement->type != CreateStatement::kTable || statement->type != CreateStatement::kIndex)
+  switch (statement->type) {
+  case CreateStatement::kTable:
+    return create_table(statement);
+  case CreateStatement::kIndex:
+    return create_index(statement);
+  default:
     return new QueryResult("Only CREATE TABLE and CREATE INDEX are implemented");
+  }
+  
+}
+
+/**
+ *Create table with given sql statements
+ *@param: sql statement
+ *@return: sql create query result
+ *Fixed based on Kevin's provided code
+ */
+QueryResult *SQLExec::create_table(const CreateStatement *statement)
+{
 
   Identifier table_name = statement->tableName;
-  ColumnNames column_names; //set of col names
+  ColumnNames column_names;
   ColumnAttributes column_attributes;
-  Identifier column_name;           //one column name
-  ColumnAttribute column_attribute; //one column attribute
-
-  for (ColumnDefinition *col : *statement->columns)
-  {
+  Identifier column_name;
+  ColumnAttribute column_attribute;
+  
+  for (ColumnDefinition *col : *statement->columns) {
     column_definition(col, column_name, column_attribute);
     column_names.push_back(column_name);
     column_attributes.push_back(column_attribute);
   }
 
-  // insert table and column to schema
+  // Add to schema: _tables and _columns
   ValueDict row;
   row["table_name"] = table_name;
-
-  //insert into _tables
-  Handle table_handle = SQLExec::tables->insert(&row);
-
-  try
-  {
-    Handles col_handles;
+  Handle t_handle = SQLExec::tables->insert(&row);  // Insert into _tables
+  try {
+    Handles c_handles;
     DbRelation &columns = SQLExec::tables->get_table(Columns::TABLE_NAME);
-
-    try
-    {
-      for (uint i = 0; i < column_names.size(); i++)
-      {
+    try {
+      for (uint i = 0; i < column_names.size(); i++) {
         row["column_name"] = column_names[i];
-        row["date_type"] = Value(column_attributes[i].get_data_type() == ColumnAttribute::INT ? "INT" : "TEXT");
-        col_handles.push_back(columns.insert(&row));
+        row["data_type"] = Value(column_attributes[i].get_data_type() == ColumnAttribute::INT ? "INT" : "TEXT");
+        c_handles.push_back(columns.insert(&row));  // Insert into _columns
       }
-
-      //Create the relation
+      
+      // Finally, actually create the relation
       DbRelation &table = SQLExec::tables->get_table(table_name);
       if (statement->ifNotExists)
         table.create_if_not_exists();
       else
         table.create();
-    }
-    catch (exception &e)
-    {
-      //attemp to undo the insertions into _columns
-      try
-      {
-        for (auto const &handle : col_handles)
+      
+    } catch (exception &e) {
+      // attempt to remove from _columns
+      try {
+        for (auto const &handle: c_handles)
           columns.del(handle);
-      }
-      catch (...)
-      {
-      }
+      } catch (...) {}
       throw;
     }
-  }
-  catch (exception &e)
-  {
-    //attemp to remove undo the insertions into _tables
-    try
-    {
-      SQLExec::tables->del(table_handle);
-    }
-    catch (...)
-    {
-    }
+
+  } catch (exception &e) {
+    try {
+      // attempt to remove from _tables
+      SQLExec::tables->del(t_handle);
+    } catch (...) {}
     throw;
   }
-
   return new QueryResult("CREATED " + table_name);
+  
 }
 
 /**
  *Milestone 4
  *create_index
+ *Create an index with given table_name and columns
  */
 
 QueryResult *SQLExec::create_index(const CreateStatement *statement)
 {
 
-  return new QueryResult("create_index not yet implemented"); //TODO: MS4
+ 
+     
+  return new QueryResult("CREATED INDEX not yet implemented"); 
   
 }
 
-/**
+/*
  *Drop table
  *@param: sql drop statement
  *@return: sql DROP query result
@@ -312,7 +315,7 @@ QueryResult *SQLExec::show_tables()
 
   delete handles;
 
-  return new QueryResult(column_names, column_attributes, rows, "successfully returned" + to_string(rows->size()) + " rows");
+  return new QueryResult(column_names, column_attributes, rows, "successfully returned " + to_string(rows->size()) + " rows");
 }
 
 
@@ -320,7 +323,7 @@ QueryResult *SQLExec::show_tables()
  *Milestone 4
  *Show index
  */
-QueryResult *SQLExec::show_index(const ShowStatment *statement)
+QueryResult *SQLExec::show_index(const ShowStatement *statement)
 {
   return new QueryResult("not implemented"); //TODO
 
