@@ -5,7 +5,7 @@
  */
 
 /**
- *Milestone 3
+ *Milestone 3 & 4
  *File modified By: Nicholas Nguyen, Yinying Liang
  */
 
@@ -215,13 +215,13 @@ QueryResult *SQLExec::create(const CreateStatement *statement)
  *Milestone 4
  *create_index
  */
-/**
+
 QueryResult *SQLExec::create_index(const CreateStatement *statement)
 {
 
   return new QueryResult("create_index not yet implemented"); //TODO: MS4
   
-  }*/
+}
 
 /**
  *Drop table
@@ -264,13 +264,13 @@ QueryResult *SQLExec::drop(const DropStatement *statement)
  *Milestone 4
  *drop_index
  */
-/**
+
 QueryResult *SQLExec::drop_index(const DropStatement *statement)
 {
 
   return new QueryResult("drop_index not yet implemented."); //TODO: MS4
 
-  }*/
+}
 
 QueryResult *SQLExec::show(const ShowStatement *statement)
 {
@@ -313,6 +313,17 @@ QueryResult *SQLExec::show_tables()
   delete handles;
 
   return new QueryResult(column_names, column_attributes, rows, "successfully returned" + to_string(rows->size()) + " rows");
+}
+
+
+/**
+ *Milestone 4
+ *Show index
+ */
+QueryResult *SQLExec::show_index(const ShowStatment *statement)
+{
+  return new QueryResult("not implemented"); //TODO
+
 }
 
 QueryResult *SQLExec::show_columns(const ShowStatement *statement)
