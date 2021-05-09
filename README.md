@@ -64,3 +64,6 @@ Handoff Summary:
     Areas of note are:
     HeapTable: Validate, UnMarshal, Append
     HeapFile: Put, Get
+    
+# Otono Sprint:
+Nicholas Nguyen, Yinying Liang
