@@ -251,8 +251,7 @@ QueryResult *SQLExec::create_index(const CreateStatement *statement)
   row["index_type"] = index_type;
   row["is_unique"] = is_unique;
   
-  cout<< "Test: Index creating..."<<endl;
-  
+    
   try{
     
     for (auto const& column_name : *statement->indexColumns)
