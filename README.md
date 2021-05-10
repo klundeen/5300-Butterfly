@@ -67,3 +67,14 @@ Handoff Summary:
     
 # Otono Sprint:
 Nicholas Nguyen, Yinying Liang
+
+## Handoff Summary:
+To run the program: ./sql5300 ~/cpsc5300/data (second arg is the path where your database env locates)
+
+Modified file: SQLExec.cpp
+
+Milestone 3:
+Major implementations: create_table, drop_table, show_table, show_columns
+compiles and works expectedly
+
+Milestone 4:

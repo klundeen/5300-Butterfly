@@ -17,7 +17,7 @@ using namespace hsql;
 // define static data
 //uses the same instance of th table class, avoid re-instantiating
 Tables *SQLExec::tables = nullptr;
-
+Indices *SQLExec::indices = nullptr;
 
 
 // make query result be printable
@@ -84,6 +84,11 @@ QueryResult *SQLExec::execute(const SQLStatement *statement)
   {
     SQLExec::tables = new Tables();
   }
+
+  if (SQLExec::indices == nullptr)
+    {
+      SQLExec::indices = new Indices();
+    }
 
   try
   {
@@ -217,8 +222,60 @@ QueryResult *SQLExec::create_table(const CreateStatement *statement)
 
 QueryResult *SQLExec::create_index(const CreateStatement *statement)
 {
+  if(statement->type != CreateStatement::kIndex)
+    return new QueryResult("Only handle create index statement");
 
-  return new QueryResult("Not yet implemented"); //Todo
+  Identifier table_name = statement->tableName;
+  Identifier index_name = statement->indexName;
+  Identifier index_type;
+  bool is_unique;
+  
+  //For now, assume true if indexType is BTREE and false otherwise (using HASH)                                                                          
+  try{
+    index_type = statement->indexType;
+  }catch (exception& e)
+    {
+      index_type = "BTREE";
+    }
+  
+  if (index_type == "BTREE")
+    is_unique = true;
+  else //index_type either BTREE or HASH
+    is_unique = false;
+  
+  Handles col_handles;
+  ValueDict row;
+  row["table_name"] = table_name;
+  row["index_name"] = index_name;
+  row["seq_in_index"] = 0;
+  row["index_type"] = index_type;
+  row["is_unique"] = is_unique;
+  
+  cout<< "Test: Index creating..."<<endl;
+  
+  try{
+    
+    for (auto const& column_name : *statement->indexColumns)
+      {
+        row["seq_in_index"].n += 1;
+        row["column_name"] = string(column_name);
+        col_handles.push_back(SQLExec::indices->insert(&row));
+      }
+    
+    DbIndex& index = SQLExec::indices->get_index(table_name,index_name);
+    index.create();
+    
+  }catch (exception& e)
+    {
+      try{
+        for(auto const &handle : col_handles)
+          SQLExec::indices->del(handle);
+      }catch(...){ }
+      throw;
+    }
+  
+  return new QueryResult("CREATED INDEX "+ index_name);
+  
 }
 
 /**
@@ -335,8 +392,39 @@ QueryResult *SQLExec::show_tables()
  */
 QueryResult *SQLExec::show_index(const ShowStatement *statement)
 {
-  return new QueryResult("not implemented"); //TODO
+  Identifier table_name = statement->tableName;
+  ColumnNames *column_names = new ColumnNames;
+  ColumnAttributes *column_attributes = new ColumnAttributes;
 
+  column_names->push_back("table_name");
+  column_names->push_back("index_name");
+  column_names->push_back("seq_in_index");
+  column_names->push_back("column_name");
+  column_names->push_back("index_type");
+  column_names->push_back("is_unique");
+  column_attributes->push_back(ColumnAttribute(ColumnAttribute::TEXT));
+  
+
+  ValueDict where;
+  where["table_name"] = Value(table_name);
+  Handles *handles = SQLExec::indices->select(&where);
+  
+
+  ValueDicts *rows = new ValueDicts;
+  for (auto const &handle: *handles){
+    ValueDict *row = SQLExec::indices->project(handle, column_names);
+    Identifier table_name = row->at("table_name").s;
+    if (table_name != Tables::TABLE_NAME && table_name != Columns::TABLE_NAME && table_name != Indices::TABLE_NAME){
+      rows->push_back(row);
+    }
+    else{
+      delete row;
+    }
+  }
+  delete handles;
+  
+  
+  return new QueryResult(column_names, column_attributes, rows, "successfully returned " + to_string(rows->size()) + " rows");
 }
 
 QueryResult *SQLExec::show_columns(const ShowStatement *statement)
