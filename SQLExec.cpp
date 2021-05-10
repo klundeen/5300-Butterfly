@@ -17,7 +17,7 @@ using namespace hsql;
 // define static data
 //uses the same instance of th table class, avoid re-instantiating
 Tables *SQLExec::tables = nullptr;
-//Indices *SQLExec::indices = nullptr;
+Indices *SQLExec::indices = nullptr;
 
 
 // make query result be printable
@@ -220,9 +220,43 @@ QueryResult *SQLExec::create_table(const CreateStatement *statement)
 QueryResult *SQLExec::create_index(const CreateStatement *statement)
 {
 
- 
-     
-  return new QueryResult("CREATED INDEX not yet implemented"); 
+  Identifier table_name = statement->tableName;                                                                                                   
+  Identifier index_name = statement->indexName;                                                                                                   
+  Identifier index_type;                                                                                                                          
+  bool is_unique;                                                                                                                                 
+  
+  //For now, assume true if indexType is BTREE and false otherwise (using HASH)                                                                   
+  try{                                                                                                                                            
+    index_type = statement->indexType;                                                                                                            
+  }catch (exception& e)                                                                                                                           
+    {                                                                                                                                             
+      index_type = "BTREE";                                                                                                                        
+    }                                                                                                                                             
+  
+  if (index_type == "BTREE")                                                                                                                        
+    is_unique = true;                                                                                                                             
+  else if(index_type == "HASH")                                                                                                                     
+    is_unique = false;                                                                                                                            
+  
+  Handles col_handles;                                                                                                                            
+  ValueDict row;                                                                                                                                  
+  row["table_name"] = table_name;                                                                                                                 
+  row["index_name"] = index_name;                                                                                                                 
+  row["seq_in_index"] = 0;                                                                                                                        
+  row["index_type"] = index_type;                                                                                                                 
+  row["is_unique"] = is_unique;  
+  cout<< "Index creating..."<<endl;
+
+  for (auto const& column_name : *statement->indexColumns)
+    {
+      row["seq_in_index"].n += 1;
+      row["column_name"] = string(column_name);
+      col_handles.push_back(SQLExec::indices->insert(&row));
+    }
+  DbIndex& index = SQLExec::indices->get_index(table_name,index_name);
+  index.create();
+  
+  return new QueryResult("CREATED INDEX "+ index_name); 
   
 }
 
