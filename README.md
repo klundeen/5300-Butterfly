@@ -69,21 +69,21 @@ Handoff Summary:
 Nicholas Nguyen, Yinying Liang
 
 ## Handoff Summary:
-To clone the project: git clone https://github.com/klundeen/5300-Butterfly.git
+ To clone the project: git clone https://github.com/klundeen/5300-Butterfly.git
 
-To make the program: type 'make'
+ To make the program: type 'make'
 
-To clean the make files: type 'make clean'
+ To clean the make files: type 'make clean'
 
-To run the program: ./sql5300 ~/cpsc5300/data (second arg is the path where your database env locates)
+ To run the program: ./sql5300 ~/cpsc5300/data (second arg is the path where your database env locates)
 
-To exit the program: type 'quit' 
+ To exit the program: type 'quit' 
 
-Modified file: SQLExec.cpp
+ Modified file: SQLExec.cpp
 
-Milestone 3:
-checkout tag Milestone 3: git checkout tags/Milestone3
-Major implementations: create_table, drop_table, show_table, show_columns
-compiles and works expectedly
+ ### Milestone 3:
+ checkout tag Milestone 3: git checkout tags/Milestone3
+ Major implementations: create_table, drop_table, show_table, show_columns
+ compiles and works expectedly
 
-Milestone 4:
+ ### Milestone 4:
