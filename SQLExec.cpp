@@ -374,8 +374,39 @@ QueryResult *SQLExec::show_tables()
  */
 QueryResult *SQLExec::show_index(const ShowStatement *statement)
 {
-  return new QueryResult("not implemented"); //TODO
+  Identifier table_name = statement->tableName;
+  ColumnNames *column_names = new ColumnNames;
+  ColumnAttributes *column_attributes = new ColumnAttributes;
 
+  column_names->push_back("table_name");
+  column_names->push_back("index_name");
+  column_names->push_back("seq_in_index");
+  column_names->push_back("column_name");
+  column_names->push_back("index_type");
+  column_names->push_back("is_unique");
+  column_attributes->push_back(ColumnAttribute(ColumnAttribute::TEXT));
+  
+
+  ValueDict where;
+  where["table_name"] = Value(table_name);
+  Handles *handles = SQLExec::indices->select(&where);
+  
+
+  ValueDicts *rows = new ValueDicts;
+  for (auto const &handle: *handles){
+    ValueDict *row = SQLExec::indices->project(handle, column_names);
+    Identifier table_name = row->at("table_name").s;
+    if (table_name != Tables::TABLE_NAME && table_name != Columns::TABLE_NAME && table_name != Indices::TABLE_NAME){
+      rows->push_back(row);
+    }
+    else{
+      delete row;
+    }
+  }
+  delete handles;
+  
+  
+  return new QueryResult(column_names, column_attributes, rows, "successfully returned " + to_string(rows->size()) + " rows");
 }
 
 QueryResult *SQLExec::show_columns(const ShowStatement *statement)
