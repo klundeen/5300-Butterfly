@@ -17,7 +17,7 @@ using namespace hsql;
 // define static data
 //uses the same instance of th table class, avoid re-instantiating
 Tables *SQLExec::tables = nullptr;
-Indices *SQLExec::indices = nullptr;
+//Indices *SQLExec::indices = nullptr;
 
 
 // make query result be printable
@@ -226,41 +226,56 @@ QueryResult *SQLExec::create_index(const CreateStatement *statement)
   
 }
 
+/**
+ *Execution of drop_table
+ */
+QueryResult *SQLExec::drop(const DropStatement *statement) {
+  switch (statement->type) {
+  case DropStatement::kTable:
+    return drop_table(statement);
+  case DropStatement::kIndex:
+    return drop_index(statement);
+  default:
+    return new QueryResult("Only DROP TABLE and CREATE INDEX are implemented");
+  }
+}
+
 /*
  *Drop table
  *@param: sql drop statement
  *@return: sql DROP query result
+ *Fixed based on Kevin's codes
  */
-QueryResult *SQLExec::drop(const DropStatement *statement)
+QueryResult *SQLExec::drop_table(const DropStatement *statement)
 {
-
-  if (statement->type != DropStatement::kTable || statement->type != DropStatement::kIndex)
-    return new QueryResult("Only DROP TABLE and DROP INDEX are implemented.");
-
   Identifier table_name = statement->name;
   if (table_name == Tables::TABLE_NAME || table_name == Columns::TABLE_NAME)
-    throw SQLExecError("Unable to drop a schema table");
-
+    throw SQLExecError("cannot drop a schema table");
+  
   ValueDict where;
   where["table_name"] = Value(table_name);
-
-  //get the table
+  
+  // get the table
   DbRelation &table = SQLExec::tables->get_table(table_name);
-
+  
+  // remove from _columns schema
   DbRelation &columns = SQLExec::tables->get_table(Columns::TABLE_NAME);
-  Handles *col_handles = columns.select(&where);
-  for (auto const &handle : *col_handles)
+  Handles *handles = columns.select(&where);
+  for (auto const &handle: *handles)
     columns.del(handle);
+  delete handles;
 
-  delete col_handles;
-
-  //drop the table before removing from the schema
+  // remove table
   table.drop();
-
-  //remove from _tables schema
-  SQLExec::tables->del(*SQLExec::tables->select(&where)->begin());
-
-  return new QueryResult("DROPPED " + table_name);
+  
+  // finally, remove from _tables schema
+  handles = SQLExec::tables->select(&where);
+  SQLExec::tables->del(*handles->begin()); // expect only one row from select
+  delete handles;
+    
+    
+    
+  return new QueryResult(string("DROPPED ") + table_name);
 }
 
 /**
@@ -303,7 +318,7 @@ QueryResult *SQLExec::show_tables()
   {
     ValueDict *row = SQLExec::tables->project(handle, column_names);
     Identifier table_name = (*row)["table_name"].s;
-    if (table_name != Tables::TABLE_NAME && table_name != Columns::TABLE_NAME)
+    if (table_name != Tables::TABLE_NAME && table_name != Columns::TABLE_NAME && table_name != Indices::TABLE_NAME)
     {
       rows->push_back(row);
     }
