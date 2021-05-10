@@ -44,6 +44,9 @@ ostream &operator<<(ostream &out, const QueryResult &qres)
         case ColumnAttribute::TEXT:
           out << "\"" << value.s << "\"";
           break;
+        case ColumnAttribute::BOOLEAN:
+          out << (value.n == 0 ? "false" : "true");
+          break;
         default:
           out << "???";
         }
@@ -359,7 +362,6 @@ QueryResult *SQLExec::drop_index(const DropStatement *statement)
   if (table_name == Tables::TABLE_NAME || table_name == Columns::TABLE_NAME || table_name == Indices::TABLE_NAME)
     throw SQLExecError("Can't drop index for schema table");
 
-  
   ValueDict where;
   where["table_name"] = Value(table_name);
   where["index_name"] = Value(index_name);
@@ -382,6 +384,8 @@ QueryResult *SQLExec::show(const ShowStatement *statement)
     return show_tables();
   case ShowStatement::kColumns:
     return show_columns(statement);
+  case ShowStatement::kIndex:
+    return show_index(statement);
   default:
     throw SQLExecError("Unrecognized SHOW type");
   }
