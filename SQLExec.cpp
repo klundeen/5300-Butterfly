@@ -225,13 +225,15 @@ QueryResult *SQLExec::create_table(const CreateStatement *statement)
     }
     throw;
   }
-  return new QueryResult("CREATED " + table_name);
+  return new QueryResult("created table " + table_name);
 }
 
 /**
  *Milestone 4
  *create_index
  *Create an index with given table_name and columns
+ *@param: create index statement
+ *@return create index requery result
  */
 
 QueryResult *SQLExec::create_index(const CreateStatement *statement)
@@ -293,7 +295,7 @@ QueryResult *SQLExec::create_index(const CreateStatement *statement)
     throw;
   }
 
-  return new QueryResult("CREATED INDEX " + index_name);
+  return new QueryResult("created index " + index_name);
 }
 
 /**
@@ -345,12 +347,14 @@ QueryResult *SQLExec::drop_table(const DropStatement *statement)
   SQLExec::tables->del(*handles->begin());
   delete handles;
 
-  return new QueryResult(string("DROPPED ") + table_name);
+  return new QueryResult(string("dropped table ") + table_name);
 }
 
 /**
  *Milestone 4
- *drop_index
+ *drop given index from the sql statment
+ *@param sql drop index statement
+ *@return drop index query result
  */
 
 QueryResult *SQLExec::drop_index(const DropStatement *statement)
@@ -376,6 +380,9 @@ QueryResult *SQLExec::drop_index(const DropStatement *statement)
   return new QueryResult("dropped index " + index_name);
 }
 
+/**
+ *Execution of show_tables, show_index, show_columns
+ */
 QueryResult *SQLExec::show(const ShowStatement *statement)
 {
   switch (statement->type)
@@ -391,6 +398,9 @@ QueryResult *SQLExec::show(const ShowStatement *statement)
   }
 }
 
+/**
+ *Show all existing tables
+ */
 QueryResult *SQLExec::show_tables()
 {
   ColumnNames *column_names = new ColumnNames();
@@ -423,7 +433,9 @@ QueryResult *SQLExec::show_tables()
 
 /**
  *Milestone 4
- *Show index
+ *Show created index of the table
+ @param: sql show index statement
+ *@return show index query result
  */
 QueryResult *SQLExec::show_index(const ShowStatement *statement)
 {
@@ -462,6 +474,11 @@ QueryResult *SQLExec::show_index(const ShowStatement *statement)
   return new QueryResult(column_names, column_attributes, rows, "successfully returned " + to_string(rows->size()) + " rows");
 }
 
+/**
+ *show all columns in the table
+ *@param: sql show columns from table statment
+ *@return: show columns query result
+ */
 QueryResult *SQLExec::show_columns(const ShowStatement *statement)
 {
   DbRelation &table = SQLExec::tables->get_table(Columns::TABLE_NAME);

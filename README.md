@@ -87,3 +87,25 @@ Nicholas Nguyen, Yinying Liang
  compiles and works expectedly
 
  ### Milestone 4:
+checkout tag Milestone 4: git checkout tags/Milestone4
+ 
+ 
+**Creating a new index:**
+
+Get the underlying table. 
+Check that all the index columns exist in the table.
+Insert a row for each column in index key into indices.
+Call get_index to get a reference to the new index and then invoke the create method on it.
+
+**Dropping an index:**
+
+Call get_index to get a reference to the index and then invoke the drop method on it.
+Remove all the rows from _indices for this index.
+
+**Showing index:**
+
+Do a query (using the select method) on _indices for the given table name.
+
+**Dropping a table:**
+
+Before dropping the table, drop each index on the table.
