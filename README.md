@@ -89,7 +89,6 @@ Nicholas Nguyen, Yinying Liang
  ### Milestone 4:
 checkout tag Milestone 4: git checkout tags/Milestone4
  
-Major implementations:
  
 **Creating a new index:**
 
