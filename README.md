@@ -86,7 +86,7 @@ Nicholas Nguyen, Yinying Liang
  
  Major implementations: create_table, drop_table, show_table, show_columns
  
- Milestone 3 program compiles and works expectedly
+ #### Milestone 3 program compiles and works expectedly
 
  ### Milestone 4:
 checkout tag Milestone 4: git checkout tags/Milestone4
@@ -113,5 +113,5 @@ Do a query (using the select method) on _indices for the given table name.
 Before dropping the table, drop each index on the table.
 
 
-Milestone 4 program compiles and works correctly
+#### Milestone 4 program compiles and works correctly
 
