@@ -244,16 +244,19 @@ string ParseTreeToString::create(const CreateStatement *stmt) {
 }
 
 string ParseTreeToString::drop(const DropStatement *stmt) {
-    string ret("DROP ");
-    switch (stmt->type) {
-        case DropStatement::kTable:
-            ret += "TABLE ";
-            break;
-        default:
-            ret += "? ";
-    }
-    ret += stmt->name;
-    return ret;
+  string ret("DROP ");
+  switch (stmt->type) {
+  case DropStatement::kTable:
+    ret += "TABLE ";
+    break;
+  case DropStatement::kIndex:
+    ret += "INDEX";
+    break;
+  default:
+    ret += "? ";
+  }
+  ret += stmt->name;
+  return ret;
 }
 
 string ParseTreeToString::show(const ShowStatement *stmt) {
