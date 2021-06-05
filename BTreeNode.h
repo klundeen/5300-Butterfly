@@ -112,4 +112,3 @@ protected:
     BlockID next_leaf;
     std::map<KeyValue, Handle> key_map;
 };
-

@@ -67,25 +67,24 @@ void BTreeIndex::close() {
     }
 }
 
-// Find all the rows whose columns are equal to key. Assumes key is a dictionary whose keys are the column                                     
-// names in the index. Returns a list of row handles.                                                                
+// Find all the rows whose columns are equal to key. Assumes key is a dictionary whos$
+// names in the index. Returns a list of row handles.                                $
 Handles *BTreeIndex::lookup(ValueDict *key_dict) const {
-  open();
   KeyValue *tkey = this->tkey(key_dict);
-  Handles* leaf = this->_lookup(this->root, this->stat->get_height(), tkey);
-  Handle* handle = leaf->push_back(find_eq(tkey));
-  // Handles* h;                                                                                  
-  if (handle != nullptr) {
-    return handle;
-  }
-  return new vector<Handle>;
+  return _lookup(root, stat->get_height(), tkey);
 }
 
-Handles *BTreeIndex::_lookup(BTreeNode *node, uint height, const KeyValue *key) const{
+Handles *BTreeIndex::_lookup(BTreeNode *node, uint height, const KeyValue *key) const {
+  Handles *h = new Handles;
+
   if (height == 1) {
-    return node;
+    auto *leaf = dynamic_cast<BTreeLeaf *>(node);
+    h->push_back(leaf->find_eq(key));
+    return h;
+    //return *node;                                                                   
   } else {
-    return this._lookup(node.find(tkey, height), height - 1, tkey);
+    auto *interior = dynamic_cast<BTreeInterior *>(node);
+    return _lookup(interior->find(key, height), height -1, key);
   }
 }
 
@@ -226,72 +225,4 @@ bool test_btree() {
             delete result;
         }
 
-    // test delete
-    ValueDict row;
-    row["a"] = 44;
-    row["b"] = 44;
-    auto thandle = table.insert(&row);
-    index.insert(thandle);
-    lookup["a"] = 44;
-    handles = index.lookup(&lookup);
-    thandle = handles->back();
-    delete handles;
-    result = table.project(thandle);
-    if (*result != row) {
-        std::cout << "44 lookup failed" << std::endl;
-        return false;
-    }
-    delete result;
-    index.del(thandle);
-    table.del(thandle);
-    handles = index.lookup(&lookup);
-    if (handles->size() != 0) {
-        std::cout << "delete failed" << std::endl;
-        return false;
-    }
-    delete handles;
-
-    // test range
-    ValueDict minkey, maxkey;
-    minkey["a"] = 100;
-    maxkey["a"] = 310;
-    handles = index.range(&minkey, &maxkey);
-    ValueDicts *results = table.project(handles);
-    for (int i = 0; i < 210; i++) {
-        if (results->at(i)->at("a") != Value(100 + i)) {
-            ValueDict *wrong = results->at(i);
-            std::cout << "range failed: " << i << ", a: " << wrong->at("a").n << ", b: " << wrong->at("b").n
-                      << std::endl;
-            return false;
-        }
-    }
-    delete handles;
-    for (auto vd: *results)
-        delete vd;
-    delete results;
-
-    // test range from beginning and to end
-    handles = index.range(nullptr, nullptr);
-    u_long count_i = handles->size();
-    delete handles;
-    handles = table.select();
-    u_long count_t = handles->size();
-    if (count_i != count_t) {
-        std::cout << "full range failed: " << count_i << std::endl;
-        return false;
-    }
-    for (u_long i = 0; i < count_t; i++)
-        index.del((*handles)[i]);
-    delete handles;
-    handles = index.range(nullptr, nullptr);
-    count_i = handles->size();
-    delete handles;
-    if (count_i != 0) {
-        std::cout << "delete everything failed: " << count_i << std::endl;
-        return false;
-    }
-    index.drop();
-    table.drop();
-    return true;
 }
-

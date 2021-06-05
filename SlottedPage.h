@@ -16,7 +16,6 @@
  *
  *      Manage a database block that contains several records.
         Modeled after slotted-page from Database Systems Concepts, 6ed, Figure 10-9.
-
         Record id are handed out sequentially starting with 1 as records are added with add().
         Each record has a header which is a fixed offset from the beginning of the block:
             Bytes 0x00 - Ox01: number of records
@@ -43,6 +42,13 @@ public:
 
     virtual RecordIDs *ids(void) const;
 
+    virtual void clear();
+
+    virtual u_int16_t size() const;
+
+    virtual u_int16_t unused_bytes() const;
+
+
 protected:
     uint16_t num_records;
     uint16_t end_free;
@@ -65,4 +71,5 @@ protected:
 };
 
 bool assertion_failure(std::string message, double x = -1, double y = -1);
+
 bool test_slotted_page();

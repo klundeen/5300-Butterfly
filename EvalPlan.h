@@ -40,3 +40,4 @@ protected:
     ValueDict *select_conjunction;  // for Select
     DbRelation &table;  // for TableScan
 };
+
