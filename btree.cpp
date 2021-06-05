@@ -32,8 +32,13 @@ void BTreeIndex::create() {
     root = new BTreeLeaf(file, stat->get_root_id(), key_profile, true);
     closed = false;
     Handles *table_rows = relation.select();
-    for (auto const &row: *table_rows)
+    try {
+      for (auto const &row: *table_rows)
         insert(row);
+    } catch (...) {
+      drop();
+      throw;
+    }
     delete table_rows;
 }
 
