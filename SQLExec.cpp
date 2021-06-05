@@ -90,7 +90,50 @@ QueryResult *SQLExec::execute(const SQLStatement *statement) {
 
 QueryResult *SQLExec::insert(const InsertStatement *statement) {
    char *t_name = statement->tableName;
-   return new QueryResult("INSERT statement not yet implemented");  // FIXME
+   DbRelation &table = SQLExec::tables->get_table(t_name);
+   ValueDict row;
+
+   const ColumnNames &const_table_col = table.get_column_names();
+   ColumnNames table_col = const_table_col;
+   const ColumnAttributes &const_table_attr = table.get_column_attributes();
+   ColumnAttributes table_attr = const_table_attr;
+
+   
+   if (statement->columns != NULL) {
+     for (size_t i = 0; i < statement->columns->size(); i++) {
+       char *colName = statement->columns->at(i);
+       
+       int index;
+       auto it = find(table_col.begin(), table_col.end(), colName);
+       if (it != table_col.end()) {
+         index = it -table_col.begin();
+       } else{
+         throw SQLExecError("Error: invalid column name.");
+       }
+       if (table_attr[index].get_data_type() == ColumnAttribute::INT) {
+         row[colName] = Value(statement->values->at(i)->ival);
+       } else {
+         row[colName] = Value(statement->values->at(i)->name);
+       }
+     }
+   } else {
+       for (size_t i = 0; i < table_col.size(); i++) {
+         if (table_attr[i].get_data_type() == ColumnAttribute::INT)
+           row[table_col.at(i)] = Value(statement->values->at(i)->ival);
+         else
+           row[table_col.at(i)] = Value(statement->values->at(i)->name);
+       }
+     }
+     Handle handle = table.insert(&row);
+     
+     IndexNames indices = SQLExec::indices->get_index_names(t_name);
+     int count = 0;
+     for (Identifier indexName: indices) {
+       count++;
+       DbIndex &index = SQLExec::indices->get_index(t_name, indexName);
+       index.insert(handle);
+     }
+     return new QueryResult(string("successfully inserted 1 row into ") + string(t_name) + string(" and ") + to_string(count) + string(" indices"));
 }
 
 QueryResult *SQLExec::del(const DeleteStatement *statement) {
