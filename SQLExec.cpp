@@ -46,6 +46,46 @@ ostream &operator<<(ostream &out, const QueryResult &qres) {
     return out;
 }
 
+ValueDict *get_where_conjunction(const hsql::Expr *expr, ColumnNames *columnNames) {
+    if (expr->type != kExprOperator) {
+        throw DbRelationError("unknown operator");
+    }
+    if (expr->opType != Expr::AND && expr->opType != Expr::SIMPLE_OP) {
+        throw DbRelationError("only support AND conjunctions");
+    }
+    ValueDict *rows = new ValueDict;
+    if (expr->opType == Expr::AND) {
+        //get where conjunction recursively
+        ValueDict *rec_row = get_where_conjunction(expr->expr, columnNames);
+
+        if (!rec_row->empty()) {
+            rows->insert(rec_row->begin(), rec_row->end());
+        }
+        rec_row = get_where_conjunction(expr->expr2, columnNames);
+        rows->insert(rec_row->begin(), rec_row->end());
+    }
+    if (expr->opType == Expr::SIMPLE_OP) {
+        if (expr->opChar != '=') {
+            throw DbRelationError("only = currently supported");
+        }
+        Identifier col_name = expr->expr->name;
+        if (find(columnNames->begin(), columnNames->end(), col_name) == columnNames->end()) {
+            throw DbRelationError("unknown column");
+        }
+        if (expr->expr2->type != kExprLiteralInt && expr->expr2->type != kExprLiteralString) {
+            throw DbRelationError("don't know how to handle data type");
+        }
+        if (expr->expr2->type == kExprLiteralInt) {
+            pair <Identifier, Value> value(col_name, Value(expr->expr2->ival));
+            rows->insert(value);
+        } else {
+            pair <Identifier, Value> value(col_name, Value(expr->expr2->name));
+            rows->insert(value);
+        }
+    }
+    return rows;
+}
+
 QueryResult::~QueryResult() {
     if (column_names != nullptr)
         delete column_names;
@@ -137,11 +177,69 @@ QueryResult *SQLExec::insert(const InsertStatement *statement) {
 }
 
 QueryResult *SQLExec::del(const DeleteStatement *statement) {
-    return new QueryResult("DELETE statement not yet implemented");  // FIXME
+  char *t_name = statement->tableName;
+  DbRelation &table = SQLExec::tables->get_table(t_name);
+  EvalPlan *e_plan = new EvalPlan(table);
+  ColumnNames column_names;
+  for (auto const columns: table.get_column_names()) {
+    column_names.push_back(columns);
+  }
+  if (statement->expr != nullptr) {
+    e_plan = new EvalPlan(get_where_conjunction(statement->expr, &column_names), e_plan);
+  }
+  EvalPlan *optimized = e_plan->optimize();
+  EvalPipeline pipeline = optimized->pipeline();
+  //delete handles                                                                        
+  auto index_names = SQLExec::indices->get_index_names(t_name);
+  Handles *handles = pipeline.second;
+  u_long n = handles->size();
+  u_long i = index_names.size();
+  //iterate through indices                                                            
+  for (auto const &handle: *handles) {
+    for (u_long j = 0; j < i; j++) {
+      DbIndex &indices = SQLExec::indices->get_index(t_name, index_names.at(j));
+      indices.del(handle);
+    }
+  }
+  //delete   
+  for (auto const &handle: *handles) {
+    table.del(handle);
+  }
+  delete handles;
+  return new QueryResult(string("successfully deleted ") + to_string(n) + string(" rows from ") + string(t_name) + string(" and ") +
+                         to_string(i) + string(" indices"));
 }
 
-QueryResult *SQLExec::select(const SelectStatement *statement) {
-    return new QueryResult("SELECT statement not yet implemented");  // FIXME
+QueryResult *SQLExec::select(const SelectStatement *statement) {                                                               
+  Identifier t_name = statement->fromTable->name;
+  DbRelation &table = SQLExec::tables->get_table(t_name);
+  EvalPlan *e_plan = new EvalPlan(table);
+  ColumnNames column_names;
+  for (auto const columns: table.get_column_names()) {
+    column_names.push_back(columns);
+  }
+  if (statement->whereClause != nullptr) {
+    e_plan = new EvalPlan(get_where_conjunction(statement->whereClause, &column_names), e_plan);
+  }
+  // Wrap the whole thing in a ProjectAll or a Project                                                                           
+  ColumnAttributes *colAttributes = new ColumnAttributes;
+  ColumnNames *colNames = new ColumnNames;
+  if (statement->selectList->front()->type == kExprStar) {
+    *colNames = table.get_column_names();
+    *colAttributes = table.get_column_attributes();
+    e_plan = new EvalPlan(EvalPlan::ProjectAll, e_plan);
+  } else {
+    for (auto const &columns : *statement->selectList) {
+      colNames->push_back(columns->name);
+    }
+    *colAttributes = table.get_column_attributes();
+    e_plan = new EvalPlan(colNames, e_plan);
+  }
+  EvalPlan *optimized = e_plan->optimize();
+  ValueDicts *rows = optimized->evaluate();
+  u_long rowLength = rows->size();
+  string output = "successfully returned " + to_string(rowLength) + " rows";
+  return new QueryResult(colNames, colAttributes, rows, output);
 }
 
 void
