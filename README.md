@@ -115,3 +115,26 @@ Before dropping the table, drop each index on the table.
 
 #### Milestone 4 program compiles and works correctly
 
+#Invierno Sprint
+
+Nathan Nishi, Bryn Lasher
+
+ To clone the project: git clone https://github.com/klundeen/5300-Butterfly.git
+
+ To make the program: type 'make'
+
+ To clean the make files: type 'make clean'
+
+ To run the program: ./sql5300 ~/cpsc5300/data (second arg is the path where your database env$
+
+ To exit the program: type 'quit'
+
+ #### Milestone 5:
+
+Implemented: insert into, delete from, select *, select col from
+All methods work as intended.
+
+#### Milestone 6:
+
+Implemented: lookup, _lookup
+Works as intended.
