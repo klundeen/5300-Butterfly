@@ -2,38 +2,90 @@
 // Dominic Burgi
 // CPSC 5300 - Butterfly
 
-#include <iostream>     // std::streambuf, std::cout
-#include <fstream>      // std::ofstream
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "db_cxx.h"
 #include "SQLParser.h"
-#include "sql/SQLStatement.h"
-#include "sql/SelectStatement.h"
-#include "sql/CreateStatement.h"
+// #include "sql/SQLStatement.h"
+// #include "sql/SelectStatement.h"
+// #include "sql/CreateStatement.h"
 
 #include "sql_shell.h"
 
 #define DEBUG_ENABLED
 #include "debug.h"
 
-const char *DB_NAME = "butterfly.db";
-const unsigned int BLOCK_SZ = 100;
-const std::string EXIT_STR = "quit";
+using namespace std;
+using namespace hsql;
+
+// Constants
+string const USAGE = "Program requires 1 argument, the path to a writeable directory\n";
+char const * DB_NAME = "butterfly.db";
+unsigned int const BLOCK_SZ = 100;
+string const EXIT_STR = "quit";
+
+// Helper functions
+static bool DataDirExists(string data_dir);
+static void GetArgs(int argc, char *argv[], string &data_dir);
+
+int main(int argc, char *argv[])
+{
+    DEBUG_OUT("Start of main()\n");
+    string data_dir;
+    GetArgs(argc, argv, data_dir);
+
+    if(!DataDirExists(data_dir))
+    {
+        cout << "Data dir must exist... Exiting.\n" << endl;
+        return -1;
+    }
+
+    string envdir = data_dir;
+    DEBUG_OUT_VAR("Initializing DB environment in %s\n", envdir.c_str());
+
+    DEBUG_OUT("Running SQL Shell\n");
+    SqlShell sql_shell;
+    sql_shell.InitializeDbEnv(envdir);
+    sql_shell.Run();
+    return 0;
+}
+
+
+static bool DataDirExists(string data_dir)
+{
+    cout << "Have you created a dir: " << data_dir  << "? (y/n) " << endl;
+    string ans;
+    getline(cin, ans);
+    if( ans[0] != 'y')
+    {
+        return false;
+    }
+    return true;
+}
+
+
+static void GetArgs(int argc, char *argv[], string &data_dir) {
+    if (argc <= 1 || argc >= 3) {
+        cerr << USAGE;
+        exit(1);
+    }
+
+    data_dir = argv[1];
+}
 
 SqlShell::SqlShell()
-    : cout_buf(std::cout.rdbuf())
+    : cout_buf(cout.rdbuf())
     , initialized(false)
     , env(0U)
     , db(&env, 0)
 {}
 
-void SqlShell::InitializeDbEnv(std::string envdir)
+void SqlShell::InitializeDbEnv(string envdir)
 {
     DEBUG_OUT("Start of SqlShell::InitializeDbEnv()\n");
-    env.set_message_stream(&std::cout);
-    env.set_error_stream(&std::cerr);
+    env.set_message_stream(&cout);
+    env.set_error_stream(&cerr);
     env.open(envdir.c_str(), DB_CREATE | DB_INIT_MPOOL, 0);
 
     db.set_message_stream(env.get_message_stream());
@@ -53,22 +105,22 @@ void SqlShell::Run()
         return;
     }
 
-    std::string sql;
-    std::string canonical_sql;
-    hsql::SQLParserResult* parse;
+    string sql;
+    string canonical_sql;
+    SQLParserResult* parse;
 
     DEBUG_OUT("Entering SQL processing loop\n");
     printf("Type \"%s\" to exit.\n", EXIT_STR.c_str());
     while(1)
     {
         printf("SQL> ");
-        getline(std::cin, sql);
+        getline(cin, sql);
         if (sql == EXIT_STR)
         {
             break;
         }
 
-        parse = hsql::SQLParser::parseSQLString(sql);
+        parse = SQLParser::parseSQLString(sql);
 
         DEBUG_OUT("Checking validity...\n");
         if(!parse->isValid())
@@ -85,25 +137,25 @@ void SqlShell::Run()
 
 
 // Execute the SQL statement from the given parse tree.
-void SqlShell::Execute(hsql::SQLParserResult* parse)
+void SqlShell::Execute(SQLParserResult* parse)
 {
     DEBUG_OUT("SQL recognized, executing\n");
 
-    for (auto i = 0; i < parse->size(); i++) {
+    for (size_t i = 0; i < parse->size(); i++) {
         PrintStatementInfo(parse->getStatement(i));
     }
 }
 
-void SqlShell::PrintStatementInfo(const hsql::SQLStatement* stmt) {
+void SqlShell::PrintStatementInfo(const SQLStatement* stmt) {
     switch (stmt->type()) {
-        case hsql::kStmtSelect:
-            PrintSelectStatementInfo((const hsql::SelectStatement*)stmt);
+        case kStmtSelect:
+            PrintSelectStatementInfo((const SelectStatement*)stmt);
             break;
         // case kStmtInsert:
         //     printInsertStatementInfo((const InsertStatement*)stmt, 0);
         //     break;
-        case hsql::kStmtCreate:
-            PrintCreateStatementInfo((const hsql::CreateStatement*)stmt);
+        case kStmtCreate:
+            PrintCreateStatementInfo((const CreateStatement*)stmt);
             break;
         // case kStmtImport:
         //     printImportStatementInfo((const ImportStatement*)stmt, 0);
@@ -120,17 +172,17 @@ void SqlShell::PrintStatementInfo(const hsql::SQLStatement* stmt) {
     }
 }
 
-void SqlShell::PrintSelectStatementInfo(const hsql::SelectStatement* stmt)
+void SqlShell::PrintSelectStatementInfo(const SelectStatement* stmt)
 {
-    std::string ret("SELECT");
+    string ret("SELECT");
     printf("%s\n", ret.c_str());
 }
 
-void SqlShell::PrintCreateStatementInfo(const hsql::CreateStatement* stmt)
+void SqlShell::PrintCreateStatementInfo(const CreateStatement* stmt)
 {
-    std::string ret("CREATE");
+    string ret("CREATE");
     ret += CreateTypeToString(stmt->type);
-    if (stmt->type != hsql::CreateStatement::CreateType::kTable)
+    if (stmt->type != CreateStatement::CreateType::kTable)
     {
         ret += "...";
     }
@@ -153,20 +205,20 @@ void SqlShell::PrintCreateStatementInfo(const hsql::CreateStatement* stmt)
     printf("%s\n", ret.c_str());
 }
 
-std::string SqlShell::CreateTypeToString(const hsql::CreateStatement::CreateType type)
+string SqlShell::CreateTypeToString(const CreateStatement::CreateType type)
 {
-    std::string ret;
+    string ret;
     switch(type) {
-    case hsql::CreateStatement::CreateType::kTable:
+    case CreateStatement::CreateType::kTable:
         ret = " TABLE";
         break;
-    case hsql::CreateStatement::CreateType::kTableFromTbl:
+    case CreateStatement::CreateType::kTableFromTbl:
         ret = " TABLE FROM";
         break;
-    case hsql::CreateStatement::CreateType::kView:
+    case CreateStatement::CreateType::kView:
         ret = " VIEW";
         break;
-    case hsql::CreateStatement::CreateType::kIndex:
+    case CreateStatement::CreateType::kIndex:
         ret = " INDEX";
         break;
     }
@@ -174,17 +226,17 @@ std::string SqlShell::CreateTypeToString(const hsql::CreateStatement::CreateType
 }
 
 
-std::string SqlShell::ColumnDefinitionToString(const hsql::ColumnDefinition *col)
+string SqlShell::ColumnDefinitionToString(const ColumnDefinition *col)
 {
-    std::string ret(col->name);
+    string ret(col->name);
     switch(col->type) {
-    case hsql::ColumnDefinition::DOUBLE:
+    case ColumnDefinition::DOUBLE:
         ret += " DOUBLE";
         break;
-    case hsql::ColumnDefinition::INT:
+    case ColumnDefinition::INT:
         ret += " INT";
         break;
-    case hsql::ColumnDefinition::TEXT:
+    case ColumnDefinition::TEXT:
         ret += " TEXT";
         break;
     default:
