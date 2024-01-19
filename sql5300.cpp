@@ -22,7 +22,7 @@ char const * DB_NAME = "butterfly.db";
 unsigned int const BLOCK_SZ = 100;
 
 // Helper functions
-// static bool DataDirExists(string data_dir);
+static bool DataDirExists(string data_dir);
 static void GetArgs(int argc, char *argv[], string &data_dir);
 
 int main(int argc, char *argv[])
@@ -48,17 +48,17 @@ int main(int argc, char *argv[])
 }
 
 
-// static bool DataDirExists(string data_dir)
-// {
-//     cout << "Have you created a dir: " << data_dir  << "? (y/n) " << endl;
-//     string ans;
-//     getline(cin, ans);
-//     if( ans[0] != 'y')
-//     {
-//         return false;
-//     }
-//     return true;
-// }
+static bool DataDirExists(string data_dir)
+{
+    cout << "Have you created a dir: " << data_dir  << "? (y/n) " << endl;
+    string ans;
+    getline(cin, ans);
+    if( ans[0] != 'y')
+    {
+        return false;
+    }
+    return true;
+}
 
 
 static void GetArgs(int argc, char *argv[], string &data_dir) {
