@@ -9,7 +9,7 @@
 #include "SQLParser.h"
 #include "sql_shell.h"
 
-#define DEBUG_ENABLED
+// #define DEBUG_ENABLED
 #include "debug.h"
 
 using namespace std;
@@ -62,7 +62,8 @@ static bool DataDirExists(string data_dir)
 
 
 static void GetArgs(int argc, char *argv[], string &data_dir) {
-    if (argc <= 1 || argc >= 3) {
+    if (argc <= 1 || argc >= 3)
+    {
         cerr << USAGE;
         exit(1);
     }
@@ -136,35 +137,18 @@ void SqlShell::Run()
 void SqlShell::Execute(SQLParserResult* parse)
 {
     DEBUG_OUT("SQL recognized, printing...\n");
-
-    for (size_t i = 0; i < parse->size(); i++) {
+    for (size_t i = 0; i < parse->size(); i++)
+    {
         PrintStatementInfo(parse->getStatement(i));
     }
 }
 
 void SqlShell::PrintStatementInfo(const SQLStatement* stmt) {
-    switch (stmt->type()) {
-        case kStmtSelect:
-            PrintSelectStatementInfo((const SelectStatement*)stmt);
-            break;
-        // case kStmtInsert:
-        //     printInsertStatementInfo((const InsertStatement*)stmt, 0);
-        //     break;
-        case kStmtCreate:
-            PrintCreateStatementInfo((const CreateStatement*)stmt);
-            break;
-        // case kStmtImport:
-        //     printImportStatementInfo((const ImportStatement*)stmt, 0);
-        //     break;
-        // case kStmtExport:
-        //     printExportStatementInfo((const ExportStatement*)stmt, 0);
-        //     break;
-        // case kStmtTransaction:
-        //     printTransactionStatementInfo((const TransactionStatement*)stmt, 0);
-        //     break;
-        default:
-            printf("Nothing to do for this statement type yet...\n");
-            break;
+    switch (stmt->type())
+    {
+    case kStmtSelect:   PrintSelectStatementInfo((const SelectStatement*)stmt); break;
+    case kStmtCreate:   PrintCreateStatementInfo((const CreateStatement*)stmt); break;
+    default:            printf("Nothing to do for this statement...\n");        break;
     }
 }
 
@@ -192,7 +176,6 @@ string SqlShell::TableRefToString(TableRef* tableRef)
         ret += JoinDefToString(tableRef->join);
     }
 
-
     if (tableRef->name != NULL)
     {
         ret += " ";
@@ -205,14 +188,6 @@ string SqlShell::TableRefToString(TableRef* tableRef)
         ret += tableRef->getName();
     }
 
-    if (tableRef->hasSchema())
-    {
-        DEBUG_OUT("It has a schema\n");
-    }
-
-    DEBUG_OUT_VAR("It has a type: %d\n", tableRef->type);
-    DEBUG_OUT_VAR("list null?: %d\n", tableRef->list == NULL);
-
     if (tableRef->type == TableRefType::kTableCrossProduct)
     {
         for (size_t i = 0; i < tableRef->list->size(); i++)
@@ -223,16 +198,6 @@ string SqlShell::TableRefToString(TableRef* tableRef)
                 ret += ",";
             }
         }
-    }
-
-    if (tableRef->alias != NULL)
-    {
-        DEBUG_OUT("It has a alias\n");
-    }
-
-    if (tableRef->schema != NULL)
-    {
-        DEBUG_OUT("It has a schema non null\n");
     }
     return ret;
 }
@@ -263,34 +228,17 @@ string SqlShell::JoinDefToString(JoinDefinition* joinDef)
 string SqlShell::JoinTypeToString(JoinType type)
 {
     string ret;
-    switch(type) {
-    case JoinType::kJoinInner:
-        // ret = " INNER";
-        break;
-    case JoinType::kJoinOuter:
-        ret = " OUTER";
-        break;
-    case JoinType::kJoinLeft:
-        ret = " LEFT";
-        break;
-    case JoinType::kJoinRight:
-        ret = " RIGHT";
-        break;
-    case JoinType::kJoinLeftOuter:
-        ret = " LEFT OUTER";
-        break;
-    case JoinType::kJoinRightOuter:
-        ret = " RIGHT OUTER";
-        break;
-    case JoinType::kJoinCross:
-        ret = " CROSS";
-        break;
-    case JoinType::kJoinNatural:
-        ret = " NATURAL";
-        break;
-    default:
-        ret = "...";
-        break;
+    switch(type)
+    {
+    case JoinType::kJoinInner:      /* ret = " INNER"; */   break;
+    case JoinType::kJoinOuter:      ret = " OUTER";         break;
+    case JoinType::kJoinLeft:       ret = " LEFT";          break;
+    case JoinType::kJoinRight:      ret = " RIGHT";         break;
+    case JoinType::kJoinLeftOuter:  ret = " LEFT OUTER";    break;
+    case JoinType::kJoinRightOuter: ret = " RIGHT OUTER";   break;
+    case JoinType::kJoinCross:      ret = " CROSS";         break;
+    case JoinType::kJoinNatural:    ret = " NATURAL";       break;
+    default:                        ret = "...";            break;
     }
     ret += " JOIN";
     return ret;
@@ -314,21 +262,13 @@ string SqlShell::ExprToString(Expr* expr)
 {
     DEBUG_OUT_VAR("Expr type?: %d\n", expr->type);
     string ret(" ");
-    switch(expr->type) {
-    case ExprType::kExprLiteralFloat:
-        ret = "float";
-        break;
-    case ExprType::kExprLiteralString:
-        ret = "string";
-        break;
+    switch(expr->type)
+    {
     case ExprType::kExprLiteralInt:
         ret += to_string(expr->ival);
         break;
     case ExprType::kExprStar:
         ret += "*";
-        break;
-    case ExprType::kExprPlaceholder:
-        ret = "placeholder";
         break;
     case ExprType::kExprColumnRef:
         if (expr->table != NULL)
@@ -338,17 +278,8 @@ string SqlShell::ExprToString(Expr* expr)
         }
         ret += expr->name;
         break;
-    case ExprType::kExprFunctionRef:
-        ret = "func";
-        break;
     case ExprType::kExprOperator:
         ret = OpToString(expr);
-        break;
-    case ExprType::kExprSelect:
-        ret = "select";
-        break;
-    case ExprType::kExprUsing:
-        ret = "USING";
         break;
     default:
         ret = "...";
@@ -361,58 +292,16 @@ string SqlShell::OpToString(Expr* op)
 {
     DEBUG_OUT_VAR("OpToString type: %d\n", op->opType);
     string ret;
-    switch(op->opType) {
-    case Expr::OperatorType::NONE:
-        ret = " NONE";
-        break;
-    case Expr::OperatorType::BETWEEN:
-        ret = " BETWEEN";
-        break;
-    case Expr::OperatorType::CASE:
-        ret = " CASE";
-        break;
+    switch(op->opType)
+    {
     case Expr::OperatorType::SIMPLE_OP:
         ret += ExprToString(op->expr);
         ret += " ";
         ret += op->opChar;
         ret += ExprToString(op->expr2);
         break;
-    case Expr::OperatorType::NOT_EQUALS:
-        ret = " NOT_EQUALS";
-        break;
-    case Expr::OperatorType::LESS_EQ:
-        ret = " LESS_EQ";
-        break;
-    case Expr::OperatorType::GREATER_EQ:
-        ret = " GREATER_EQ";
-        break;
-    case Expr::OperatorType::LIKE:
-        ret = " LIKE";
-        break;
-    case Expr::OperatorType::NOT_LIKE:
-        ret = " NOT_LIKE";
-        break;
-    case Expr::OperatorType::AND:
-        ret = " AND";
-        break;
-    case Expr::OperatorType::OR:
-        ret = " OR";
-        break;
-    case Expr::OperatorType::IN:
-        ret = " IN";
-        break;
-    case Expr::OperatorType::NOT:
-        ret = " NOT";
-        break;
-    case Expr::OperatorType::UMINUS:
-        ret = " UMINUS";
-        break;
-    case Expr::OperatorType::ISNULL:
-        ret = " ISNULL";
-        break;
-    case Expr::OperatorType::EXISTS:
-        ret = " EXISTS";
-        break;
+    default:
+        ret += "...";
     }
     return ret;
 }
@@ -446,20 +335,14 @@ void SqlShell::PrintCreateStatementInfo(const CreateStatement* stmt)
 
 string SqlShell::CreateTypeToString(const CreateStatement::CreateType type)
 {
-    string ret;
-    switch(type) {
-    case CreateStatement::CreateType::kTable:
-        ret = " TABLE";
-        break;
-    case CreateStatement::CreateType::kTableFromTbl:
-        ret = " TABLE FROM";
-        break;
-    case CreateStatement::CreateType::kView:
-        ret = " VIEW";
-        break;
-    case CreateStatement::CreateType::kIndex:
-        ret = " INDEX";
-        break;
+    string ret(" ");
+    switch(type)
+    {
+    case CreateStatement::CreateType::kTable:           ret += "TABLE";         break;
+    case CreateStatement::CreateType::kTableFromTbl:    ret += "TABLE FROM";    break;
+    case CreateStatement::CreateType::kView:            ret += "VIEW";          break;
+    case CreateStatement::CreateType::kIndex:           ret += "INDEX";         break;
+    default:                                            ret += "...";           break;
     }
     return ret;
 }
@@ -468,19 +351,12 @@ string SqlShell::CreateTypeToString(const CreateStatement::CreateType type)
 string SqlShell::ColumnDefinitionToString(const ColumnDefinition *col)
 {
     string ret(col->name);
-    switch(col->type) {
-    case ColumnDefinition::DOUBLE:
-        ret += " DOUBLE";
-        break;
-    case ColumnDefinition::INT:
-        ret += " INT";
-        break;
-    case ColumnDefinition::TEXT:
-        ret += " TEXT";
-        break;
-    default:
-        ret += " ...";
-        break;
+    switch(col->type)
+    {
+    case ColumnDefinition::DOUBLE:  ret += " DOUBLE";   break;
+    case ColumnDefinition::INT:     ret += " INT";      break;
+    case ColumnDefinition::TEXT:    ret += " TEXT";     break;
+    default:                        ret += " ...";      break;
     }
     return ret;
 }
