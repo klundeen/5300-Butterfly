@@ -7,10 +7,6 @@
 #include <string.h>
 #include "db_cxx.h"
 #include "SQLParser.h"
-// #include "sql/SQLStatement.h"
-// #include "sql/SelectStatement.h"
-// #include "sql/CreateStatement.h"
-
 #include "sql_shell.h"
 
 #define DEBUG_ENABLED
@@ -21,12 +17,12 @@ using namespace hsql;
 
 // Constants
 string const USAGE = "Program requires 1 argument, the path to a writeable directory\n";
+string const EXIT_STR = "quit";
 char const * DB_NAME = "butterfly.db";
 unsigned int const BLOCK_SZ = 100;
-string const EXIT_STR = "quit";
 
 // Helper functions
-static bool DataDirExists(string data_dir);
+// static bool DataDirExists(string data_dir);
 static void GetArgs(int argc, char *argv[], string &data_dir);
 
 int main(int argc, char *argv[])
@@ -52,17 +48,17 @@ int main(int argc, char *argv[])
 }
 
 
-static bool DataDirExists(string data_dir)
-{
-    cout << "Have you created a dir: " << data_dir  << "? (y/n) " << endl;
-    string ans;
-    getline(cin, ans);
-    if( ans[0] != 'y')
-    {
-        return false;
-    }
-    return true;
-}
+// static bool DataDirExists(string data_dir)
+// {
+//     cout << "Have you created a dir: " << data_dir  << "? (y/n) " << endl;
+//     string ans;
+//     getline(cin, ans);
+//     if( ans[0] != 'y')
+//     {
+//         return false;
+//     }
+//     return true;
+// }
 
 
 static void GetArgs(int argc, char *argv[], string &data_dir) {
@@ -139,7 +135,7 @@ void SqlShell::Run()
 // Execute the SQL statement from the given parse tree.
 void SqlShell::Execute(SQLParserResult* parse)
 {
-    DEBUG_OUT("SQL recognized, executing\n");
+    DEBUG_OUT("SQL recognized, printing...\n");
 
     for (size_t i = 0; i < parse->size(); i++) {
         PrintStatementInfo(parse->getStatement(i));
@@ -175,7 +171,250 @@ void SqlShell::PrintStatementInfo(const SQLStatement* stmt) {
 void SqlShell::PrintSelectStatementInfo(const SelectStatement* stmt)
 {
     string ret("SELECT");
+    ret += SelectListToString(stmt->selectList);
+    ret += " FROM";
+    ret += TableRefToString(stmt->fromTable);
+    if (stmt->whereClause != NULL)
+    {
+        ret += " WHERE";
+        ret += ExprToString(stmt->whereClause);
+    }
+
     printf("%s\n", ret.c_str());
+}
+
+string SqlShell::TableRefToString(TableRef* tableRef)
+{
+    string ret;
+    if (tableRef->join != NULL)
+    {
+        DEBUG_OUT("It has a join\n");
+        ret += JoinDefToString(tableRef->join);
+    }
+
+
+    if (tableRef->name != NULL)
+    {
+        ret += " ";
+        DEBUG_OUT("It has a non-null name...\n");
+        if (tableRef->alias != NULL)
+        {
+            ret += tableRef->name;
+            ret += " AS ";
+        }
+        ret += tableRef->getName();
+    }
+
+    if (tableRef->hasSchema())
+    {
+        DEBUG_OUT("It has a schema\n");
+    }
+
+    DEBUG_OUT_VAR("It has a type: %d\n", tableRef->type);
+    DEBUG_OUT_VAR("list null?: %d\n", tableRef->list == NULL);
+
+    if (tableRef->type == TableRefType::kTableCrossProduct)
+    {
+        for (size_t i = 0; i < tableRef->list->size(); i++)
+        {
+            ret += TableRefToString((*tableRef->list)[i]);
+            if (i < tableRef->list->size() - 1)
+            {
+                ret += ",";
+            }
+        }
+    }
+
+    if (tableRef->alias != NULL)
+    {
+        DEBUG_OUT("It has a alias\n");
+    }
+
+    if (tableRef->schema != NULL)
+    {
+        DEBUG_OUT("It has a schema non null\n");
+    }
+    return ret;
+}
+
+string SqlShell::JoinDefToString(JoinDefinition* joinDef)
+{
+    string ret(" ");
+    if (joinDef->left->alias != NULL)
+    {
+        ret += joinDef->left->name;
+        ret += " AS ";
+    }
+    ret += joinDef->left->getName();
+    ret += JoinTypeToString(joinDef->type);
+    ret += " ";
+
+    if (joinDef->right->alias != NULL)
+    {
+        ret += joinDef->right->name;
+        ret += " AS ";
+    }
+    ret += joinDef->right->getName();
+    ret += " ON";
+    ret += ExprToString(joinDef->condition);
+    return ret;
+}
+
+string SqlShell::JoinTypeToString(JoinType type)
+{
+    string ret;
+    switch(type) {
+    case JoinType::kJoinInner:
+        // ret = " INNER";
+        break;
+    case JoinType::kJoinOuter:
+        ret = " OUTER";
+        break;
+    case JoinType::kJoinLeft:
+        ret = " LEFT";
+        break;
+    case JoinType::kJoinRight:
+        ret = " RIGHT";
+        break;
+    case JoinType::kJoinLeftOuter:
+        ret = " LEFT OUTER";
+        break;
+    case JoinType::kJoinRightOuter:
+        ret = " RIGHT OUTER";
+        break;
+    case JoinType::kJoinCross:
+        ret = " CROSS";
+        break;
+    case JoinType::kJoinNatural:
+        ret = " NATURAL";
+        break;
+    default:
+        ret = "...";
+        break;
+    }
+    ret += " JOIN";
+    return ret;
+}
+
+string SqlShell::SelectListToString(vector<Expr*>* selectList)
+{
+    string ret;
+    for (size_t i = 0; i < selectList->size(); i++)
+    {
+        ret += ExprToString((*selectList)[i]);
+        if (i < selectList->size() - 1)
+        {
+            ret += ",";
+        }
+    }
+    return ret;
+}
+
+string SqlShell::ExprToString(Expr* expr)
+{
+    DEBUG_OUT_VAR("Expr type?: %d\n", expr->type);
+    string ret(" ");
+    switch(expr->type) {
+    case ExprType::kExprLiteralFloat:
+        ret = "float";
+        break;
+    case ExprType::kExprLiteralString:
+        ret = "string";
+        break;
+    case ExprType::kExprLiteralInt:
+        ret += to_string(expr->ival);
+        break;
+    case ExprType::kExprStar:
+        ret += "*";
+        break;
+    case ExprType::kExprPlaceholder:
+        ret = "placeholder";
+        break;
+    case ExprType::kExprColumnRef:
+        if (expr->table != NULL)
+        {
+            ret += expr->table;
+            ret += ".";
+        }
+        ret += expr->name;
+        break;
+    case ExprType::kExprFunctionRef:
+        ret = "func";
+        break;
+    case ExprType::kExprOperator:
+        ret = OpToString(expr);
+        break;
+    case ExprType::kExprSelect:
+        ret = "select";
+        break;
+    case ExprType::kExprUsing:
+        ret = "USING";
+        break;
+    default:
+        ret = "...";
+        break;
+    }
+    return ret;
+}
+
+string SqlShell::OpToString(Expr* op)
+{
+    DEBUG_OUT_VAR("OpToString type: %d\n", op->opType);
+    string ret;
+    switch(op->opType) {
+    case Expr::OperatorType::NONE:
+        ret = " NONE";
+        break;
+    case Expr::OperatorType::BETWEEN:
+        ret = " BETWEEN";
+        break;
+    case Expr::OperatorType::CASE:
+        ret = " CASE";
+        break;
+    case Expr::OperatorType::SIMPLE_OP:
+        ret += ExprToString(op->expr);
+        ret += " ";
+        ret += op->opChar;
+        ret += ExprToString(op->expr2);
+        break;
+    case Expr::OperatorType::NOT_EQUALS:
+        ret = " NOT_EQUALS";
+        break;
+    case Expr::OperatorType::LESS_EQ:
+        ret = " LESS_EQ";
+        break;
+    case Expr::OperatorType::GREATER_EQ:
+        ret = " GREATER_EQ";
+        break;
+    case Expr::OperatorType::LIKE:
+        ret = " LIKE";
+        break;
+    case Expr::OperatorType::NOT_LIKE:
+        ret = " NOT_LIKE";
+        break;
+    case Expr::OperatorType::AND:
+        ret = " AND";
+        break;
+    case Expr::OperatorType::OR:
+        ret = " OR";
+        break;
+    case Expr::OperatorType::IN:
+        ret = " IN";
+        break;
+    case Expr::OperatorType::NOT:
+        ret = " NOT";
+        break;
+    case Expr::OperatorType::UMINUS:
+        ret = " UMINUS";
+        break;
+    case Expr::OperatorType::ISNULL:
+        ret = " ISNULL";
+        break;
+    case Expr::OperatorType::EXISTS:
+        ret = " EXISTS";
+        break;
+    }
+    return ret;
 }
 
 void SqlShell::PrintCreateStatementInfo(const CreateStatement* stmt)
