@@ -197,10 +197,15 @@ void HeapFile::drop(void) {
 }
 
 void HeapFile::open(void) {
+    DEBUG_OUT("HeapFile::open()\n");
+    if (0 == this->last) {
+        throw DbException("File does not exist\n");
+    }
     this->db_open();
 }
 
 void HeapFile::close(void) {
+    DEBUG_OUT("HeapFile::close()\n");
     this->db.close(0);
     this->closed = true;
 }
@@ -224,18 +229,23 @@ SlottedPage* HeapFile::get_new(void) {
 }
 
 SlottedPage *HeapFile::get(BlockID block_id) {
+    DEBUG_OUT("HeapFile::get()\n");
     char block[DbBlock::BLOCK_SZ];
     std::memset(block, 0, sizeof(block));
     Dbt data(block, sizeof(block));
+
+    // int block_id = ++this->last;
     Dbt key(&block_id, sizeof(block_id));
 
+    // write out an empty block and read it back in so Berkeley DB is managing the memory
     SlottedPage* page = new SlottedPage(data, this->last, true);
+    // this->db.put(nullptr, &key, &data, 0); // write it out with initialization applied
     this->db.get(nullptr, &key, &data, 0);
     return page;
 }
 
 void HeapFile::put(DbBlock *block) {
-    // FIXME
+    DEBUG_OUT("HeapFile::put FIXME\n");
 }
 
 BlockIDs *HeapFile::block_ids() {
@@ -277,9 +287,12 @@ void HeapTable::create() {
 }
 
 void HeapTable::create_if_not_exists() {
+    DEBUG_OUT("HeapTable::create_if_not_exists()\n");
     try {
+        DEBUG_OUT("TRYING open()\n");
         this->file.open();
     } catch (DbException &exc) {
+        DEBUG_OUT("CATCHING and creating\n");
         this->file.create();
     }
 }
@@ -311,6 +324,7 @@ void HeapTable::del(const Handle handle) {
 
 
 Handles* HeapTable::select() {
+    DEBUG_OUT("HeapTable::select()\n");
     Handles* handles = new Handles();
     BlockIDs* block_ids = file.block_ids();
     for (auto const& block_id: *block_ids) {
@@ -369,12 +383,13 @@ ValueDict *HeapTable::validate(const ValueDict *row) {
 
 Handle HeapTable::append(const ValueDict *row) {
     Dbt *data = this->marshal(row);
-    SlottedPage *block = this->file.get(this->file.get_last_block_id());
+    SlottedPage *block;
     RecordID record_id;
     try {
+        block = this->file.get(this->file.get_last_block_id());
         record_id = block->add(data);
     } catch (DbException &exc) {
-        SlottedPage *block = this->file.get_new();
+        block = this->file.get_new();
         record_id = block->add(data);
     }
 
