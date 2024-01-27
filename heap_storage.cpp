@@ -4,12 +4,58 @@
 #include "db_cxx.h"
 #include "heap_storage.h"
 
-bool test_heap_storage() {return true;}
-/* FIXME FIXME FIXME */
+#define DEBUG_ENABLED
+#include "debug.h"
+
+const char *DB_NAME = "butterfyl.db";
+
+bool test_heap_storage() {
+    DEBUG_OUT("Beginning of test_heap_storage\n");
+    ColumnNames column_names;
+    column_names.push_back("a");
+    column_names.push_back("b");
+    ColumnAttributes column_attributes;
+    ColumnAttribute ca(ColumnAttribute::INT);
+    column_attributes.push_back(ca);
+    ca.set_data_type(ColumnAttribute::TEXT);
+    column_attributes.push_back(ca);
+
+    HeapTable table1("_test_create_drop_cpp", column_names, column_attributes);
+    table1.create();
+    std::cout << "create ok" << std::endl;
+    table1.drop();  // drop makes the object unusable because of BerkeleyDB restriction -- maybe want to fix this some day
+    std::cout << "drop ok" << std::endl;
+
+    DEBUG_OUT("Create and drop okay\n");
+    HeapTable table("_test_data_cpp", column_names, column_attributes);
+    table.create_if_not_exists();
+    std::cout << "create_if_not_exsts ok" << std::endl;
+
+    ValueDict row;
+    row["a"] = Value(12);
+    row["b"] = Value("Hello!");
+    std::cout << "try insert" << std::endl;
+    table.insert(&row);
+    std::cout << "insert ok" << std::endl;
+    Handles* handles = table.select();
+    std::cout << "select ok " << handles->size() << std::endl;
+    ValueDict *result = table.project((*handles)[0]);
+    std::cout << "project ok" << std::endl;
+    Value value = (*result)["a"];
+    if (value.n != 12)
+        return false;
+    value = (*result)["b"];
+    if (value.s != "Hello!")
+        return false;
+    table.drop();
+
+    return true;
+}
 
 typedef u_int16_t u16;
 
 SlottedPage::SlottedPage(Dbt &block, BlockID block_id, bool is_new) : DbBlock(block, block_id, is_new) {
+    DEBUG_OUT("SlottedPage()\n");
     if (is_new) {
         this->num_records = 0;
         this->end_free = DbBlock::BLOCK_SZ - 1;
@@ -41,6 +87,7 @@ void SlottedPage::get_header(u_int16_t &size, u_int16_t &loc, RecordID id) {
 
 // Store the size and offset for given id. For id of zero, store the block header.
 void SlottedPage::put_header(RecordID id, u16 size, u16 loc) {
+    DEBUG_OUT("put_header()\n");
     if (id == 0) { // called the put_header() version and using the default params
         size = this->num_records;
         loc = this->end_free;
@@ -72,11 +119,11 @@ void SlottedPage::put(RecordID record_id, const Dbt &data) {
 
     u16 new_size = sizeof(data);
     if (new_size > size) {
-        u16 extra = new_size - size;
+    u16 extra = new_size - size;
         if (!this->has_room(extra)) {
             throw DbBlockNoRoomError("not enough room for new record");
         }
-        this->slide(loc + new_size, loc + size);
+        this->slide(loc, loc - extra);
         /*
         Store the actual data in the byte array...
         memcpy(this->address(loc), data->get_data(), size);
@@ -86,7 +133,7 @@ void SlottedPage::put(RecordID record_id, const Dbt &data) {
         Store the actual data in the byte array...
         memcpy(this->address(loc), data->get_data(), size);
         */
-        this->slide(loc + new_size, loc + size);
+        // this->slide(loc , loc - extra);
     }
     this->get_header(size, loc, record_id);
     this->put_header(record_id, new_size, loc);
@@ -135,17 +182,18 @@ void* SlottedPage::address(u16 offset) {
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-
-
-
 void HeapFile::create(void) {
+    DEBUG_OUT("HeapFile::create()\n");
     this->db_open(DB_CREATE | DB_EXCL);
     SlottedPage *page = this->get_new();
     this->put(page);
 }
 
 void HeapFile::drop(void) {
-
+    DEBUG_OUT("drop()\n");
+    this->close();
+    DEBUG_OUT_VAR("Attempting to remove: %s\n", this->dbfilename.c_str());
+    remove(this->dbfilename.c_str());
 }
 
 void HeapFile::open(void) {
@@ -160,6 +208,7 @@ void HeapFile::close(void) {
 // Allocate a new block for the database file.
 // Returns the new empty DbBlock that is managing the records in this block and its block id.
 SlottedPage* HeapFile::get_new(void) {
+    DEBUG_OUT("HeapFile::get_new()\n");
     char block[DbBlock::BLOCK_SZ];
     std::memset(block, 0, sizeof(block));
     Dbt data(block, sizeof(block));
@@ -195,19 +244,35 @@ BlockIDs *HeapFile::block_ids() {
     return block_ids;
 }
 
+// Note, requires _DB_ENV be initialized
+// FIXME, should check if it is NULL befor using it...
 void HeapFile::db_open(uint flags) {
+    DEBUG_OUT_VAR("db_open(%d)\n", flags);
     if (!this->closed) {
+        DEBUG_OUT("already open...\n");
         return;
     }
 
-    // FIXME
-    // this->db = bdb.DB();
+    const char *home_dir;
+    _DB_ENV->get_home(&home_dir);
+    DEBUG_OUT_VAR("home_dir?: %s\n", home_dir);
+    this->dbfilename = std::string(home_dir) + "/" + this->name + ".db";
+    DEBUG_OUT_VAR("dbfilename?: %s\n", this->dbfilename.c_str());
+    this->db.set_re_len(DbBlock::BLOCK_SZ); // Set record length to 4K
+    this->db.set_message_stream(_DB_ENV->get_message_stream());
+    this->db.set_error_stream(_DB_ENV->get_error_stream());
+    this->db.open(NULL, this->dbfilename.c_str(), NULL, DB_RECNO, DB_CREATE | DB_TRUNCATE, 0644); // Erases anything already there
+    this->closed = false;
 }
 
 //////////////////////////////////////////////////////////////////////////////////
 
+HeapTable::HeapTable(Identifier table_name, ColumnNames column_names, ColumnAttributes column_attributes) :
+    DbRelation(table_name, column_names, column_attributes), file(table_name)
+{}
 
 void HeapTable::create() {
+    DEBUG_OUT("HeapTable::create()\n");
     this->file.create();
 }
 
