@@ -468,31 +468,31 @@ ValueDict *HeapTable::unmarshal(Dbt *data) {
     ValueDict *row = new ValueDict();
     uint col_num = 0;
     u16 offset = 0;
-    void *bytes = data->get_data();
+    char *bytes = (char *)data->get_data();
 
     for (auto const &it : this->column_names) {
         ColumnAttribute cur_attribute = this->column_attributes[col_num++];
-        DEBUG_OUT_VAR("Column: %s\n", (*it).c_str());
+        DEBUG_OUT_VAR("Column: %s\n", it.c_str());
         DEBUG_OUT_VAR("Column Attr Type: %d\n", cur_attribute.get_data_type());
         switch (cur_attribute.get_data_type()) {
         case ColumnAttribute::DataType::INT:
         {
             DEBUG_OUT("Im a INT\n");
-            // int32_t val;
-            // memcpy(&val, bytes + offset, sizeof(val));
-            // offset += sizeof(val);
-            // (*row)[it] = Value(val);
+            int32_t val;
+            memcpy(&val, bytes + offset, sizeof(val));
+            offset += sizeof(val);
+            (*row)[it] = Value(val);
             break;
         }
         case ColumnAttribute::DataType::TEXT:
         {
             DEBUG_OUT("I'm a TEXT\n");
-            // u16 size;
-            // memcpy(&size, bytes + offset, sizeof(size));
-            // offset += sizeof(size);
-            // std::string val(bytes + offset, size);
-            // (*row)[it] = Value(val);
-            // offset += size;
+            u16 size;
+            memcpy(&size, bytes + offset, sizeof(size));
+            offset += sizeof(size);
+            std::string val(bytes + offset, size);
+            (*row)[it] = Value(val);
+            offset += size;
             break;
         }
         default:
@@ -505,3 +505,5 @@ ValueDict *HeapTable::unmarshal(Dbt *data) {
 
     return row;
 }
+
+
