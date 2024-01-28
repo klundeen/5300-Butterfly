@@ -43,10 +43,16 @@ bool test_heap_storage() {
     std::cout << "project ok" << std::endl;
     Value value = (*result)["a"];
     if (value.n != 12)
+    {
+        DEBUG_OUT_VAR("value.n != 12, was: %d\n", value.n);
         return false;
+    }
     value = (*result)["b"];
     if (value.s != "Hello!")
+    {
+        DEBUG_OUT("value.s != 'Hello!' was TRUE\n");
         return false;
+    }
     table.drop();
 
     return true;
@@ -55,22 +61,32 @@ bool test_heap_storage() {
 typedef u_int16_t u16;
 
 SlottedPage::SlottedPage(Dbt &block, BlockID block_id, bool is_new) : DbBlock(block, block_id, is_new) {
-    DEBUG_OUT("SlottedPage()\n");
+    DEBUG_OUT_VAR("SlottedPage(id: %d new:%d)\n", block_id, is_new);
     if (is_new) {
+        DEBUG_OUT("New slotted page, initialize num_records and end_free\n");
         this->num_records = 0;
         this->end_free = DbBlock::BLOCK_SZ - 1;
+        DEBUG_OUT_VAR("Initial end_free: %u\n", this->end_free);
         put_header();
     } else {
+        DEBUG_OUT("Existing slotted page\n");
         get_header(this->num_records, this->end_free);
+        DEBUG_OUT_VAR("I think my free is: %u\n", this->end_free);
+        DEBUG_OUT_VAR("And my record count: %u\n", this->num_records);
     }
 }
 
 // Add a new record to the block. Return its id.
 RecordID SlottedPage::add(const Dbt* data) {
+    DEBUG_OUT("SlottedPage::add()\n");
     if (!has_room(data->get_size()))
+    {
         throw DbBlockNoRoomError("not enough room for new record");
+    }
     u16 id = ++this->num_records;
     u16 size = (u16) data->get_size();
+    DEBUG_OUT_VAR("data size: %u\n", size);
+    DEBUG_OUT_VAR("current end_free: %d\n", this->end_free);
     this->end_free -= size;
     u16 loc = this->end_free + 1;
     put_header();
@@ -81,14 +97,17 @@ RecordID SlottedPage::add(const Dbt* data) {
 
 
 void SlottedPage::get_header(u_int16_t &size, u_int16_t &loc, RecordID id) {
+    DEBUG_OUT_VAR("get_header(id=%u)\n", id);
     size = this->get_n(4 * id);
     loc = this->get_n(4 * id + 2);
+    DEBUG_OUT_VAR("Assigning size:%u loc:%u\n", size, loc);
 }
 
 // Store the size and offset for given id. For id of zero, store the block header.
 void SlottedPage::put_header(RecordID id, u16 size, u16 loc) {
-    DEBUG_OUT("put_header()\n");
+    DEBUG_OUT_VAR("put_header(id:%u size:%u loc:%u)\n", id, size, loc);
     if (id == 0) { // called the put_header() version and using the default params
+        DEBUG_OUT_VAR("Update num_records to:%u end_free:%u\n", this->num_records, this->end_free);
         size = this->num_records;
         loc = this->end_free;
     }
@@ -149,12 +168,17 @@ void SlottedPage::del(RecordID record_id) {
 }
 
 RecordIDs *SlottedPage::ids(void) {
-    RecordIDs *data = new RecordIDs();
-    return data;
+    RecordIDs* record_ids = new RecordIDs(this->num_records + 1);
+    iota(record_ids->begin(), record_ids->end(), 1);
+
+    return record_ids;
 }
 
 bool SlottedPage::has_room(u_int16_t size) {
+    DEBUG_OUT_VAR("SlottedPage::has_room(%u)\n", size);
+    DEBUG_OUT_VAR("End free:%u Num records:%u\n", this->end_free, this->num_records);
     u16 available = this->end_free - (this->num_records + 1) * 4;
+    DEBUG_OUT_VAR("Avail: %u\n", available);
     return size <= available;
 }
 
@@ -229,23 +253,24 @@ SlottedPage* HeapFile::get_new(void) {
 }
 
 SlottedPage *HeapFile::get(BlockID block_id) {
-    DEBUG_OUT("HeapFile::get()\n");
+
+    // FIXME THIS IS A PROBLEM WE AREN'T MAINTAINING PAGE STATE
     char block[DbBlock::BLOCK_SZ];
     std::memset(block, 0, sizeof(block));
     Dbt data(block, sizeof(block));
 
-    // int block_id = ++this->last;
-    Dbt key(&block_id, sizeof(block_id));
-
-    // write out an empty block and read it back in so Berkeley DB is managing the memory
-    SlottedPage* page = new SlottedPage(data, this->last, true);
-    // this->db.put(nullptr, &key, &data, 0); // write it out with initialization applied
-    this->db.get(nullptr, &key, &data, 0);
+    SlottedPage *page = new SlottedPage(data, block_id);
     return page;
 }
 
 void HeapFile::put(DbBlock *block) {
-    DEBUG_OUT("HeapFile::put FIXME\n");
+    DEBUG_OUT("HeapFile::put()\n");
+
+    int block_number;
+    Dbt key(&block_number, sizeof(block_number));
+    block_number = block->get_block_id();
+
+    db.put(NULL, &key, block->get_block(), 0);  // write block #1 to the database
 }
 
 BlockIDs *HeapFile::block_ids() {
@@ -310,6 +335,7 @@ void HeapTable::close() {
 }
 
 Handle HeapTable::insert(const ValueDict *row) {
+    DEBUG_OUT("HeapTable::insert()\n");
     this->open();
     return this->append(this->validate(row));
 }
@@ -324,7 +350,7 @@ void HeapTable::del(const Handle handle) {
 
 
 Handles* HeapTable::select() {
-    DEBUG_OUT("HeapTable::select()\n");
+    DEBUG_OUT("HeapTable::select() FIXME\n");
     Handles* handles = new Handles();
     BlockIDs* block_ids = file.block_ids();
     for (auto const& block_id: *block_ids) {
@@ -340,13 +366,17 @@ Handles* HeapTable::select() {
 }
 
 Handles* HeapTable::select(const ValueDict* where) {
+    DEBUG_OUT("HeapTable::select(where) FIXME?\n");
     Handles* handles = new Handles();
     BlockIDs* block_ids = file.block_ids();
     for (auto const& block_id: *block_ids) {
         SlottedPage* block = file.get(block_id);
         RecordIDs* record_ids = block->ids();
         for (auto const& record_id: *record_ids)
+        {
+            // FIXME, need to only return WHERE qualified record...
             handles->push_back(Handle(block_id, record_id));
+        }
         delete record_ids;
         delete block;
     }
@@ -356,10 +386,12 @@ Handles* HeapTable::select(const ValueDict* where) {
 
 
 ValueDict *HeapTable::project(Handle handle) {
+    DEBUG_OUT("HeapTable::project(handle) FIXME\n");
     return this->project(handle, NULL);
 }
 
 ValueDict *HeapTable::project(Handle handle, const ColumnNames *column_names) {
+    DEBUG_OUT("HeapTable::project(handle, column_names ) FIXME\n");
     BlockID block_id = handle.first;
     RecordID record_id = handle.second;
 
@@ -382,13 +414,16 @@ ValueDict *HeapTable::validate(const ValueDict *row) {
 }
 
 Handle HeapTable::append(const ValueDict *row) {
+    DEBUG_OUT("HeapTable::append()\n");
     Dbt *data = this->marshal(row);
     SlottedPage *block;
     RecordID record_id;
+    block = this->file.get(this->file.get_last_block_id());
     try {
-        block = this->file.get(this->file.get_last_block_id());
+        DEBUG_OUT("Try to add...\n");
         record_id = block->add(data);
     } catch (DbException &exc) {
+        DEBUG_OUT("Catch and get_new()...\n");
         block = this->file.get_new();
         record_id = block->add(data);
     }
@@ -402,6 +437,7 @@ Handle HeapTable::append(const ValueDict *row) {
 // return the bits to go into the file
 // caller responsible for freeing the returned Dbt and its enclosed ret->get_data().
 Dbt *HeapTable::marshal(const ValueDict* row) {
+    DEBUG_OUT("HeapTable::marshal()\n");
     char *bytes = new char[DbBlock::BLOCK_SZ]; // more than we need (we insist that one row fits into DbBlock::BLOCK_SZ)
     uint offset = 0;
     uint col_num = 0;
@@ -430,13 +466,45 @@ Dbt *HeapTable::marshal(const ValueDict* row) {
 }
 
 ValueDict *HeapTable::unmarshal(Dbt *data) {
-
+    DEBUG_OUT("HeapTable::unmarshal() FIXME\n");
     ValueDict *row = new ValueDict();
+    uint col_num = 0;
+    // u16 offset = 0;
+
+    for (auto it = this->column_names.begin(); it != this->column_names.end(); ++it) {
+        ColumnAttribute cur_attribute = this->column_attributes[col_num++];
+        DEBUG_OUT_VAR("Column: %s\n", (*it).c_str());
+        DEBUG_OUT_VAR("Column Attr Type: %d\n", cur_attribute.get_data_type());
+        switch (cur_attribute.get_data_type()) {
+        case ColumnAttribute::DataType::INT:
+        {
+            DEBUG_OUT("Imma int...\n");
+        }
+        default: break;
+        }
+    }
+
+    /*
+row = {}
+offset = 0
+for column_name in self.column_names:
+    column = self.columns[column_name]
+    if column['data_type'] == 'INT':
+        row[column_name] = int.from_bytes(data[offset:offset + 4], byteorder='big', signed=True)
+        offset += 4
+    elif column['data_type'] == 'TEXT':
+        size = int.from_bytes(data[offset:offset + 2], byteorder='big')
+        offset += 2
+        row[column_name] = data[offset:offset + size].decode('utf-8')
+        offset += size
+    else:
+        raise ValueError('Cannot unmarahal ' + column['data_type'])
+return row
+    */
     // u16 offset = 0;
     // for (auto& it : this->column_names) {
 
     // }
 
     return row;
-
 }
