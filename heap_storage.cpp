@@ -389,15 +389,23 @@ ValueDict *HeapTable::project(Handle handle, const ColumnNames *column_names) {
 
     SlottedPage *block = this->file.get(block_id);
     Dbt *data = block->get(record_id);
-    ValueDict *row = this->unmarshal(data);
+    ValueDict *rows = this->unmarshal(data);
 
     if (NULL == column_names) {
-        return row;
+        return rows;
     }
 
-    // FIXME
-    // If we have column_names, we need to use them to project...
-    return row;
+    ValueDict *proj_rows = new ValueDict;
+    for (auto const& col : *column_names)
+    {
+        auto it = rows->find(col);
+        if (it != rows->end())
+        {
+            (*proj_rows)[col] = it->second;
+        }
+    }
+
+    return rows;
 }
 
 
@@ -459,42 +467,41 @@ ValueDict *HeapTable::unmarshal(Dbt *data) {
     DEBUG_OUT("HeapTable::unmarshal() FIXME\n");
     ValueDict *row = new ValueDict();
     uint col_num = 0;
-    // u16 offset = 0;
+    u16 offset = 0;
+    void *bytes = data->get_data();
 
-    for (auto it = this->column_names.begin(); it != this->column_names.end(); ++it) {
+    for (auto const &it : this->column_names) {
         ColumnAttribute cur_attribute = this->column_attributes[col_num++];
         DEBUG_OUT_VAR("Column: %s\n", (*it).c_str());
         DEBUG_OUT_VAR("Column Attr Type: %d\n", cur_attribute.get_data_type());
         switch (cur_attribute.get_data_type()) {
         case ColumnAttribute::DataType::INT:
         {
-            DEBUG_OUT("Imma int...\n");
+            DEBUG_OUT("Im a INT\n");
+            // int32_t val;
+            // memcpy(&val, bytes + offset, sizeof(val));
+            // offset += sizeof(val);
+            // (*row)[it] = Value(val);
+            break;
         }
-        default: break;
+        case ColumnAttribute::DataType::TEXT:
+        {
+            DEBUG_OUT("I'm a TEXT\n");
+            // u16 size;
+            // memcpy(&size, bytes + offset, sizeof(size));
+            // offset += sizeof(size);
+            // std::string val(bytes + offset, size);
+            // (*row)[it] = Value(val);
+            // offset += size;
+            break;
+        }
+        default:
+        {
+            DEBUG_OUT("Unsupported type...\n");
+            break;
+        }
         }
     }
-
-    /*
-row = {}
-offset = 0
-for column_name in self.column_names:
-    column = self.columns[column_name]
-    if column['data_type'] == 'INT':
-        row[column_name] = int.from_bytes(data[offset:offset + 4], byteorder='big', signed=True)
-        offset += 4
-    elif column['data_type'] == 'TEXT':
-        size = int.from_bytes(data[offset:offset + 2], byteorder='big')
-        offset += 2
-        row[column_name] = data[offset:offset + size].decode('utf-8')
-        offset += size
-    else:
-        raise ValueError('Cannot unmarahal ' + column['data_type'])
-return row
-    */
-    // u16 offset = 0;
-    // for (auto& it : this->column_names) {
-
-    // }
 
     return row;
 }
