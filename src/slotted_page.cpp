@@ -1,6 +1,6 @@
 #include <cstring>
 #include <numeric>
-#include "heap_storage.h"
+#include "heap_table.h"
 #include "slotted_page.h"
 #include "db_cxx.h"
 

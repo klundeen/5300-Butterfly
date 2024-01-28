@@ -11,7 +11,7 @@ BIN_DIR     = bin
 # following is a list of all the compiled object files needed to build the sql5300 executable
 OBJS       = $(BIN_DIR)/sql5300.o \
 			 $(BIN_DIR)/sql_exec.o \
-			 $(BIN_DIR)/heap_storage.o \
+			 $(BIN_DIR)/heap_table.o \
 			 $(BIN_DIR)/slotted_page.o \
 			 $(BIN_DIR)/heap_file.o
 

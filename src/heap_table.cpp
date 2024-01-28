@@ -2,7 +2,7 @@
 #include <numeric>
 
 #include "db_cxx.h"
-#include "heap_storage.h"
+#include "heap_table.h"
 
 // #define DEBUG_ENABLED
 #include "debug.h"

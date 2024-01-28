@@ -1,5 +1,5 @@
 /**
- * @file heap_storage.h - Implementation of storage_engine with a heap file structure.
+ * @file heap_table.h - Implementation of storage_engine with a heap file structure.
  * SlottedPage: DbBlock
  * HeapFile: DbFile
  * HeapTable: DbRelation

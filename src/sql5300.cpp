@@ -11,7 +11,7 @@
 #include <cassert>
 #include "db_cxx.h"
 #include "SQLParser.h"
-#include "heap_storage.h"
+#include "heap_table.h"
 #include "sql_exec.h"
 
 using namespace std;
