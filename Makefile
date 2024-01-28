@@ -13,7 +13,8 @@ OBJS       = $(BIN_DIR)/sql5300.o \
 			 $(BIN_DIR)/sql_exec.o \
 			 $(BIN_DIR)/heap_table.o \
 			 $(BIN_DIR)/slotted_page.o \
-			 $(BIN_DIR)/heap_file.o
+			 $(BIN_DIR)/heap_file.o \
+			 $(BIN_DIR)/heap_storage-test.o
 
 # Rule for linking to create the executable
 # Note that this is the default target since it is the first non-generic one in the Makefile: $ make

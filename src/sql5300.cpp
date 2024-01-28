@@ -13,6 +13,7 @@
 #include "SQLParser.h"
 #include "heap_table.h"
 #include "sql_exec.h"
+#include "heap_storage-test.h"
 
 using namespace std;
 using namespace hsql;
