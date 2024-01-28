@@ -2,8 +2,8 @@
 // Dominic Burgi
 // CPSC 5300 - Butterfly
 
-#ifndef SQL_SHELL_H
-#define SQL_SHELL_H
+#ifndef SQL_EXEC_H
+#define SQL_EXEC_H
 
 #include "db_cxx.h"
 #include "SQLParserResult.h"
@@ -14,11 +14,11 @@
 using namespace std;
 using namespace hsql;
 
-class SqlShell
+class SqlExec
 {
 public:
-    SqlShell();
-    void PrintStatementInfo(const SQLStatement* stmt);
+    SqlExec();
+    void Execute(const SQLStatement* stmt);
 private:
     void PrintSelectStatementInfo(const SelectStatement* stmt);
     void PrintCreateStatementInfo(const CreateStatement* stmt);
@@ -34,4 +34,4 @@ private:
     streambuf * cout_buf;
 };
 
-#endif // SQL_SHELL_H
+#endif // SQL_EXEC_H

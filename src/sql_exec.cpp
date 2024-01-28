@@ -7,7 +7,7 @@
 #include <string.h>
 #include "db_cxx.h"
 #include "SQLParser.h"
-#include "sql_shell.h"
+#include "sql_exec.h"
 
 // #define DEBUG_ENABLED
 #include "debug.h"
@@ -21,9 +21,9 @@ string const EXIT_STR = "quit";
 char const * DB_NAME = "butterfly.db";
 unsigned int const BLOCK_SZ = 100;
 
-SqlShell::SqlShell(): cout_buf(cout.rdbuf()) {}
+SqlExec::SqlExec(): cout_buf(cout.rdbuf()) {}
 
-void SqlShell::PrintStatementInfo(const SQLStatement* stmt) {
+void SqlExec::Execute(const SQLStatement* stmt) {
     switch (stmt->type())
     {
     case kStmtSelect:   PrintSelectStatementInfo((const SelectStatement*)stmt); break;
@@ -32,7 +32,7 @@ void SqlShell::PrintStatementInfo(const SQLStatement* stmt) {
     }
 }
 
-void SqlShell::PrintSelectStatementInfo(const SelectStatement* stmt)
+void SqlExec::PrintSelectStatementInfo(const SelectStatement* stmt)
 {
     string ret("SELECT");
     ret += SelectListToString(stmt->selectList);
@@ -47,7 +47,7 @@ void SqlShell::PrintSelectStatementInfo(const SelectStatement* stmt)
     printf("%s\n", ret.c_str());
 }
 
-string SqlShell::TableRefToString(TableRef* tableRef)
+string SqlExec::TableRefToString(TableRef* tableRef)
 {
     string ret;
     if (tableRef->join != NULL)
@@ -82,7 +82,7 @@ string SqlShell::TableRefToString(TableRef* tableRef)
     return ret;
 }
 
-string SqlShell::JoinDefToString(JoinDefinition* joinDef)
+string SqlExec::JoinDefToString(JoinDefinition* joinDef)
 {
     string ret(" ");
     if (joinDef->left->alias != NULL)
@@ -105,7 +105,7 @@ string SqlShell::JoinDefToString(JoinDefinition* joinDef)
     return ret;
 }
 
-string SqlShell::JoinTypeToString(JoinType type)
+string SqlExec::JoinTypeToString(JoinType type)
 {
     string ret;
     switch(type)
@@ -124,7 +124,7 @@ string SqlShell::JoinTypeToString(JoinType type)
     return ret;
 }
 
-string SqlShell::SelectListToString(vector<Expr*>* selectList)
+string SqlExec::SelectListToString(vector<Expr*>* selectList)
 {
     string ret;
     for (size_t i = 0; i < selectList->size(); i++)
@@ -138,7 +138,7 @@ string SqlShell::SelectListToString(vector<Expr*>* selectList)
     return ret;
 }
 
-string SqlShell::ExprToString(Expr* expr)
+string SqlExec::ExprToString(Expr* expr)
 {
     DEBUG_OUT_VAR("Expr type?: %d\n", expr->type);
     string ret(" ");
@@ -168,7 +168,7 @@ string SqlShell::ExprToString(Expr* expr)
     return ret;
 }
 
-string SqlShell::OpToString(Expr* op)
+string SqlExec::OpToString(Expr* op)
 {
     DEBUG_OUT_VAR("OpToString type: %d\n", op->opType);
     string ret;
@@ -186,7 +186,7 @@ string SqlShell::OpToString(Expr* op)
     return ret;
 }
 
-void SqlShell::PrintCreateStatementInfo(const CreateStatement* stmt)
+void SqlExec::PrintCreateStatementInfo(const CreateStatement* stmt)
 {
     string ret("CREATE");
     ret += CreateTypeToString(stmt->type);
@@ -213,7 +213,7 @@ void SqlShell::PrintCreateStatementInfo(const CreateStatement* stmt)
     printf("%s\n", ret.c_str());
 }
 
-string SqlShell::CreateTypeToString(const CreateStatement::CreateType type)
+string SqlExec::CreateTypeToString(const CreateStatement::CreateType type)
 {
     string ret(" ");
     switch(type)
@@ -228,7 +228,7 @@ string SqlShell::CreateTypeToString(const CreateStatement::CreateType type)
 }
 
 
-string SqlShell::ColumnDefinitionToString(const ColumnDefinition *col)
+string SqlExec::ColumnDefinitionToString(const ColumnDefinition *col)
 {
     string ret(col->name);
     switch(col->type)

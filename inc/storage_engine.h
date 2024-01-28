@@ -15,6 +15,8 @@
 #include <vector>
 #include "db_cxx.h"
 
+typedef u_int16_t u16;
+
 /**
  * Global variable to hold dbenv.
  */

@@ -12,7 +12,7 @@
 #include "db_cxx.h"
 #include "SQLParser.h"
 #include "heap_storage.h"
-#include "sql_shell.h"
+#include "sql_exec.h"
 
 using namespace std;
 using namespace hsql;
@@ -21,24 +21,6 @@ using namespace hsql;
  * we allocate and initialize the _DB_ENV global
  */
 DbEnv *_DB_ENV;
-
-/**
- * Execute an SQL statement (but for now, just spit back the SQL)
- * @param stmt  Hyrise AST for the statement
- * @returns     a string (for now) of the SQL statment
- */
-string execute(const SQLStatement *stmt) {
-    switch (stmt->type()) {
-        case kStmtSelect:
-            return "SELECT...";  // FIXME
-        case kStmtInsert:
-            return "INSERT...";  // FIXME
-        case kStmtCreate:
-            return "CREATE...";  // FIXME
-        default:
-            return "Not implemented";
-    }
-}
 
 /**
  * Main entry point of the sql5300 program
@@ -87,10 +69,9 @@ int main(int argc, char *argv[]) {
         }
 
         // execute the statement
-        SqlShell shell;
+        SqlExec shell;
         for (uint i = 0; i < result->size(); ++i) {
-            // cout << execute(result->getStatement(i)) << endl;
-            shell.PrintStatementInfo(result->getStatement(i));
+            shell.Execute(result->getStatement(i));
         }
         delete result;
     }
