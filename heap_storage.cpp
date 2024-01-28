@@ -378,22 +378,17 @@ Handles* HeapTable::select(const ValueDict* where) {
 
 
 ValueDict *HeapTable::project(Handle handle) {
-    DEBUG_OUT("HeapTable::project(handle) FIXME\n");
-    return this->project(handle, NULL);
+    return this->project(handle, &this->column_names);
 }
 
+
 ValueDict *HeapTable::project(Handle handle, const ColumnNames *column_names) {
-    DEBUG_OUT("HeapTable::project(handle, column_names ) FIXME\n");
     BlockID block_id = handle.first;
     RecordID record_id = handle.second;
 
     SlottedPage *block = this->file.get(block_id);
     Dbt *data = block->get(record_id);
     ValueDict *rows = this->unmarshal(data);
-
-    if (NULL == column_names) {
-        return rows;
-    }
 
     ValueDict *proj_rows = new ValueDict;
     for (auto const& col : *column_names)
@@ -410,7 +405,16 @@ ValueDict *HeapTable::project(Handle handle, const ColumnNames *column_names) {
 
 
 ValueDict *HeapTable::validate(const ValueDict *row) {
-    return (ValueDict*)row;
+    ValueDict *full_row = new ValueDict();
+    for (auto const& col : this->column_names) {
+        auto const &it = row->find(col);
+        if (it == row->end()) {
+            throw DbRelationError("Don't know how to handle this row...");
+        }
+        full_row->insert({col, it->second});
+    }
+
+    return full_row;
 }
 
 Handle HeapTable::append(const ValueDict *row) {
