@@ -4,7 +4,7 @@
 #include "db_cxx.h"
 #include "heap_storage.h"
 
-#define DEBUG_ENABLED
+// #define DEBUG_ENABLED
 #include "debug.h"
 
 bool test_heap_storage() {
@@ -52,6 +52,9 @@ bool test_heap_storage() {
         return false;
     }
     table.drop();
+
+    delete result;
+    delete handles;
 
     return true;
 }
@@ -401,8 +404,8 @@ ValueDict *HeapTable::project(Handle handle, const ColumnNames *column_names) {
     SlottedPage *block = this->file.get(block_id);
     Dbt *data = block->get(record_id);
     ValueDict *rows = this->unmarshal(data);
-
     ValueDict *proj_rows = new ValueDict;
+
     for (auto const& col : *column_names)
     {
         auto it = rows->find(col);
@@ -414,7 +417,8 @@ ValueDict *HeapTable::project(Handle handle, const ColumnNames *column_names) {
 
     delete block;
     delete data;
-    return rows;
+    delete rows;
+    return proj_rows;
 }
 
 
@@ -446,6 +450,10 @@ Handle HeapTable::append(const ValueDict *row) {
     }
 
     this->file.put(block);
+
+    delete data;
+    delete block;
+
     return Handle(this->file.get_last_block_id(), record_id);
 }
 
@@ -476,8 +484,10 @@ Dbt *HeapTable::marshal(const ValueDict* row) {
     }
     char *right_size_bytes = new char[offset];
     memcpy(right_size_bytes, bytes, offset);
-    delete[] bytes;
     Dbt *data = new Dbt(right_size_bytes, offset);
+
+    delete[] bytes;
+    delete[] right_size_bytes;
     return data;
 }
 

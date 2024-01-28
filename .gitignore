@@ -31,3 +31,6 @@
 *.out
 *.app
 sql5300
+
+# Log outputs
+*.log
