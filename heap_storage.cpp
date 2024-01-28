@@ -125,9 +125,9 @@ Dbt *SlottedPage::get(RecordID record_id) {
         return NULL;
     }
 
-    char block[DbBlock::BLOCK_SZ];
-    std::memset(block, 0, sizeof(block));
-    Dbt *data = new Dbt(block, sizeof(block));
+    // char block[DbBlock::BLOCK_SZ];
+    // std::memset(block, 0, sizeof(block));
+    Dbt *data = new Dbt(address(loc), sizeof(block));
     return data;
 }
 
@@ -142,19 +142,12 @@ void SlottedPage::put(RecordID record_id, const Dbt &data) {
         if (!this->has_room(extra)) {
             throw DbBlockNoRoomError("not enough room for new record");
         }
-        this->slide(loc, loc - extra);
-        /*
-        Store the actual data in the byte array...
-        memcpy(this->address(loc), data->get_data(), size);
-        */
+        this->slide(loc, loc - new_size);
+        memcpy(this->address(loc - new_size), data.get_data(), new_size);
     } else {
-        /*
-        Store the actual data in the byte array...
-        memcpy(this->address(loc), data->get_data(), size);
-        */
-        // this->slide(loc , loc - extra);
+        memcpy(this->address(loc), data.get_data(), new_size);
     }
-    this->get_header(size, loc, record_id);
+    this->put_header();
     this->put_header(record_id, new_size, loc);
 }
 
@@ -255,10 +248,9 @@ SlottedPage* HeapFile::get_new(void) {
 SlottedPage *HeapFile::get(BlockID block_id) {
 
     // FIXME THIS IS A PROBLEM WE AREN'T MAINTAINING PAGE STATE
-    char block[DbBlock::BLOCK_SZ];
-    std::memset(block, 0, sizeof(block));
-    Dbt data(block, sizeof(block));
-
+    Dbt key(&block_id, sizeof(block_id));
+    Dbt data;
+    this->db.get(nullptr, &key, &data, 0);
     SlottedPage *page = new SlottedPage(data, block_id);
     return page;
 }
@@ -416,9 +408,8 @@ ValueDict *HeapTable::validate(const ValueDict *row) {
 Handle HeapTable::append(const ValueDict *row) {
     DEBUG_OUT("HeapTable::append()\n");
     Dbt *data = this->marshal(row);
-    SlottedPage *block;
+    SlottedPage *block = this->file.get(this->file.get_last_block_id());
     RecordID record_id;
-    block = this->file.get(this->file.get_last_block_id());
     try {
         DEBUG_OUT("Try to add...\n");
         record_id = block->add(data);
@@ -429,8 +420,7 @@ Handle HeapTable::append(const ValueDict *row) {
     }
 
     this->file.put(block);
-    Handle handle(this->file.get_last_block_id(), record_id);
-    return handle;
+    return Handle(this->file.get_last_block_id(), record_id);
 }
 
 
