@@ -1,6 +1,6 @@
 /**
- * @file sql5300.cpp - main entry for the relation manaager's SQL shell
- * @author Kevin Lundeen
+ * @file sql5300.cpp - main entry for the relation manager's SQL shell
+ * @author Kevin Lundeen, Dominic Burgi
  * @see "Seattle University, cpsc4300/5300, Spring 2021"
  */
 #include <stdio.h>

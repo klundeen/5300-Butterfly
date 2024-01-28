@@ -4,7 +4,7 @@
  * DbFile
  * DbRelation
  *
- * @author Kevin Lundeen
+ * @author Kevin Lundeen, Dominic Burgi
  * @see "Seattle University, CPSC5300, Winter Quarter 2024"
  */
 #pragma once
