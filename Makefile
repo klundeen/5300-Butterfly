@@ -9,7 +9,7 @@ INC_DIR     = inc
 BIN_DIR     = bin
 
 # following is a list of all the compiled object files needed to build the sql5300 executable
-OBJS       = $(BIN_DIR)/sql5300.o $(BIN_DIR)/heap_storage.o
+OBJS       = $(BIN_DIR)/sql5300.o $(BIN_DIR)/heap_storage.o $(BIN_DIR)/sql_shell.o
 
 # Rule for linking to create the executable
 # Note that this is the default target since it is the first non-generic one in the Makefile: $ make

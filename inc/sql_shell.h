@@ -18,11 +18,8 @@ class SqlShell
 {
 public:
     SqlShell();
-    void InitializeDbEnv(string envdir);
-    void Run();
-private:
-    void Execute(SQLParserResult* result);
     void PrintStatementInfo(const SQLStatement* stmt);
+private:
     void PrintSelectStatementInfo(const SelectStatement* stmt);
     void PrintCreateStatementInfo(const CreateStatement* stmt);
     string CreateTypeToString(const CreateStatement::CreateType type);
@@ -35,11 +32,6 @@ private:
     string OpToString(Expr* op);
     string WhereClauseToString(Expr* where);
     streambuf * cout_buf;
-    bool initialized;
-    DbEnv env;
-    Db db;
-
-
 };
 
 #endif // SQL_SHELL_H

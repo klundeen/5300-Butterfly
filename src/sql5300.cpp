@@ -1,7 +1,7 @@
 /**
  * @file sql5300.cpp - main entry for the relation manager's SQL shell
  * @author Kevin Lundeen, Dominic Burgi
- * @see "Seattle University, cpsc4300/5300, Spring 2021"
+ * @see "Seattle University, cpsc5300"
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -12,6 +12,7 @@
 #include "db_cxx.h"
 #include "SQLParser.h"
 #include "heap_storage.h"
+#include "sql_shell.h"
 
 using namespace std;
 using namespace hsql;
@@ -86,8 +87,10 @@ int main(int argc, char *argv[]) {
         }
 
         // execute the statement
+        SqlShell shell;
         for (uint i = 0; i < result->size(); ++i) {
-            cout << execute(result->getStatement(i)) << endl;
+            // cout << execute(result->getStatement(i)) << endl;
+            shell.PrintStatementInfo(result->getStatement(i));
         }
         delete result;
     }
