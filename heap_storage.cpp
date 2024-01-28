@@ -200,16 +200,14 @@ void* SlottedPage::address(u16 offset) {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void HeapFile::create(void) {
-    DEBUG_OUT("HeapFile::create()\n");
     this->db_open(DB_CREATE | DB_EXCL);
     SlottedPage *page = this->get_new();
     this->put(page);
+    delete page;
 }
 
 void HeapFile::drop(void) {
-    DEBUG_OUT("drop()\n");
     this->close();
-    DEBUG_OUT_VAR("Attempting to remove: %s\n", this->dbfilename.c_str());
     remove(this->dbfilename.c_str());
 }
 
@@ -222,8 +220,7 @@ void HeapFile::open(void) {
 }
 
 void HeapFile::close(void) {
-    DEBUG_OUT("HeapFile::close()\n");
-    this->db.close(0);
+    this->db.close(DB_FORCESYNC);
     this->closed = true;
 }
 
@@ -340,14 +337,14 @@ void HeapTable::del(const Handle handle) {
 
 
 Handles* HeapTable::select() {
-    DEBUG_OUT("HeapTable::select() FIXME\n");
     Handles* handles = new Handles();
     BlockIDs* block_ids = file.block_ids();
     for (auto const& block_id: *block_ids) {
         SlottedPage* block = file.get(block_id);
         RecordIDs* record_ids = block->ids();
-        for (auto const& record_id: *record_ids)
+        for (auto const& record_id: *record_ids) {
             handles->push_back(Handle(block_id, record_id));
+        }
         delete record_ids;
         delete block;
     }
@@ -356,14 +353,13 @@ Handles* HeapTable::select() {
 }
 
 Handles* HeapTable::select(const ValueDict* where) {
-    DEBUG_OUT("HeapTable::select(where) FIXME?\n");
+    DEBUG_OUT("HeapTable::select(where) FIXME\n");
     Handles* handles = new Handles();
     BlockIDs* block_ids = file.block_ids();
     for (auto const& block_id: *block_ids) {
         SlottedPage* block = file.get(block_id);
         RecordIDs* record_ids = block->ids();
-        for (auto const& record_id: *record_ids)
-        {
+        for (auto const& record_id: *record_ids) {
             // FIXME, need to only return WHERE qualified record...
             handles->push_back(Handle(block_id, record_id));
         }
@@ -398,6 +394,8 @@ ValueDict *HeapTable::project(Handle handle, const ColumnNames *column_names) {
         }
     }
 
+    delete block;
+    delete data;
     return rows;
 }
 
