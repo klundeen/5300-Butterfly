@@ -238,7 +238,7 @@ void HeapFile::open(void) {
 }
 
 void HeapFile::close(void) {
-    this->db.close(DB_FORCESYNC);
+    this->db.close(0);
     this->closed = true;
 }
 
@@ -255,8 +255,8 @@ SlottedPage* HeapFile::get_new(void) {
 
     // write out an empty block and read it back in so Berkeley DB is managing the memory
     SlottedPage* page = new SlottedPage(data, this->last, true);
-    this->db.put(nullptr, &key, &data, 0); // write it out with initialization applied
-    this->db.get(nullptr, &key, &data, 0);
+        this->db.put(nullptr, &key, &data, 0); // write it out with initialization applied
+        this->db.get(nullptr, &key, &data, 0);
     return page;
 }
 
@@ -295,7 +295,7 @@ void HeapFile::db_open(uint flags) {
 
     const char *home_dir;
     _DB_ENV->get_home(&home_dir);
-    this->dbfilename = std::string(home_dir) + "/" + this->name + ".db";
+    this->dbfilename = std::string(home_dir) + this->name + ".db";
     this->db.set_re_len(DbBlock::BLOCK_SZ); // Set record length to 4K
     this->db.set_message_stream(_DB_ENV->get_message_stream());
     this->db.set_error_stream(_DB_ENV->get_error_stream());
