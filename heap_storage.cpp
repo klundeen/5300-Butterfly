@@ -7,8 +7,6 @@
 #define DEBUG_ENABLED
 #include "debug.h"
 
-const char *DB_NAME = "butterfyl.db";
-
 bool test_heap_storage() {
     DEBUG_OUT("Beginning of test_heap_storage\n");
     ColumnNames column_names;
@@ -125,8 +123,6 @@ Dbt *SlottedPage::get(RecordID record_id) {
         return nullptr;
     }
 
-    // char block[DbBlock::BLOCK_SZ];
-    // std::memset(block, 0, sizeof(block));
     Dbt *data = new Dbt(address(loc), sizeof(block));
     return data;
 }
@@ -176,10 +172,32 @@ bool SlottedPage::has_room(u_int16_t size) {
 }
 
 void SlottedPage::slide(u_int16_t start, u_int16_t end) {
-    u16 shift = end - start;
+    DEBUG_OUT("SlottedPage::slide()\n");
+    int shift = end - start;
     if (0 == shift) {
         return;
     }
+
+    // Identify the start of the block, and move it
+    u16 block_start = this->end_free + 1;
+    memmove(address(block_start + shift), address(block_start), abs(shift));
+
+    // Shift each record within the block
+    RecordIDs *records = this->ids();
+    for (RecordID &it : *records) {
+        u16 size = 0;
+        u16 loc = 0;
+        get_header(size, loc, it);
+        if (loc <= start) {
+            loc += shift;
+            put_header(it, size, loc);
+        }
+    }
+
+    // Record updates back to the block header
+    this->end_free += shift;
+    put_header();
+    delete records;
 }
 
 // Get 2-byte integer at given offset in block.
@@ -277,7 +295,7 @@ void HeapFile::db_open(uint flags) {
 
     const char *home_dir;
     _DB_ENV->get_home(&home_dir);
-    this->dbfilename = std::string(home_dir) + this->name + ".db";
+    this->dbfilename = std::string(home_dir) + "/" + this->name + ".db";
     this->db.set_re_len(DbBlock::BLOCK_SZ); // Set record length to 4K
     this->db.set_message_stream(_DB_ENV->get_message_stream());
     this->db.set_error_stream(_DB_ENV->get_error_stream());
@@ -464,7 +482,7 @@ Dbt *HeapTable::marshal(const ValueDict* row) {
 }
 
 ValueDict *HeapTable::unmarshal(Dbt *data) {
-    DEBUG_OUT("HeapTable::unmarshal() FIXME\n");
+    DEBUG_OUT("HeapTable::unmarshal()\n");
     ValueDict *row = new ValueDict();
     uint col_num = 0;
     u16 offset = 0;
@@ -505,5 +523,3 @@ ValueDict *HeapTable::unmarshal(Dbt *data) {
 
     return row;
 }
-
-
