@@ -122,7 +122,7 @@ Dbt *SlottedPage::get(RecordID record_id) {
 
     if (loc == 0)
     {
-        return NULL;
+        return nullptr;
     }
 
     // char block[DbBlock::BLOCK_SZ];
@@ -246,8 +246,6 @@ SlottedPage* HeapFile::get_new(void) {
 }
 
 SlottedPage *HeapFile::get(BlockID block_id) {
-
-    // FIXME THIS IS A PROBLEM WE AREN'T MAINTAINING PAGE STATE
     Dbt key(&block_id, sizeof(block_id));
     Dbt data;
     this->db.get(nullptr, &key, &data, 0);
@@ -262,7 +260,7 @@ void HeapFile::put(DbBlock *block) {
     Dbt key(&block_number, sizeof(block_number));
     block_number = block->get_block_id();
 
-    db.put(NULL, &key, block->get_block(), 0);  // write block #1 to the database
+    db.put(nullptr, &key, block->get_block(), 0);  // write block #1 to the database
 }
 
 BlockIDs *HeapFile::block_ids() {
@@ -282,13 +280,11 @@ void HeapFile::db_open(uint flags) {
 
     const char *home_dir;
     _DB_ENV->get_home(&home_dir);
-    DEBUG_OUT_VAR("home_dir?: %s\n", home_dir);
-    this->dbfilename = std::string(home_dir) + "/" + this->name + ".db";
-    DEBUG_OUT_VAR("dbfilename?: %s\n", this->dbfilename.c_str());
+    this->dbfilename = std::string(home_dir) + this->name + ".db";
     this->db.set_re_len(DbBlock::BLOCK_SZ); // Set record length to 4K
     this->db.set_message_stream(_DB_ENV->get_message_stream());
     this->db.set_error_stream(_DB_ENV->get_error_stream());
-    this->db.open(NULL, this->dbfilename.c_str(), NULL, DB_RECNO, DB_CREATE | DB_TRUNCATE, 0644); // Erases anything already there
+    this->db.open(nullptr, this->dbfilename.c_str(), nullptr, DB_RECNO, DB_CREATE | DB_TRUNCATE, 0644); // Erases anything already there
     this->closed = false;
 }
 
@@ -327,9 +323,11 @@ void HeapTable::close() {
 }
 
 Handle HeapTable::insert(const ValueDict *row) {
-    DEBUG_OUT("HeapTable::insert()\n");
     this->open();
-    return this->append(this->validate(row));
+    ValueDict *val = this->validate(row);
+    Handle handle = this->append(val);
+    delete val;
+    return handle;
 }
 
 void HeapTable::update(const Handle handle, const ValueDict *new_values) {

@@ -33,7 +33,7 @@ string execute(const SQLStatement *stmt) {
         case kStmtInsert:
             return "INSERT...";  // FIXME
         case kStmtCreate:
-			return "CREATE...";  // FIXME
+            return "CREATE...";  // FIXME
         default:
             return "Not implemented";
     }
@@ -81,7 +81,7 @@ int main(int argc, char *argv[]) {
         SQLParserResult *result = SQLParser::parseSQLString(query);
         if (!result->isValid()) {
             cout << "invalid SQL: " << query << endl;
-	    	delete result;
+            delete result;
             continue;
         }
 
@@ -89,7 +89,7 @@ int main(int argc, char *argv[]) {
         for (uint i = 0; i < result->size(); ++i) {
             cout << execute(result->getStatement(i)) << endl;
         }
-		delete result;
+        delete result;
     }
     return EXIT_SUCCESS;
 }
