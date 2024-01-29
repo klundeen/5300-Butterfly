@@ -134,7 +134,7 @@ RecordIDs *SlottedPage::ids(void) {
 bool SlottedPage::has_room(u_int16_t size) {
     DEBUG_OUT_VAR("SlottedPage::has_room(%u)\n", size);
     DEBUG_OUT_VAR("End free:%u Num records:%u\n", this->end_free, this->num_records);
-    u16 available = this->end_free - (this->num_records + 1) * 4;
+    u16 available = this->end_free - (this->num_records + 1) * HEADER_SIZE;
     DEBUG_OUT_VAR("Avail: %u\n", available);
     return size <= available;
 }
