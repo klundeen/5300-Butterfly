@@ -1,7 +1,5 @@
 /**
  * @file heap_table.h - Implementation of storage_engine with a heap file structure.
- * SlottedPage: DbBlock
- * HeapFile: DbFile
  * HeapTable: DbRelation
  *
  * @author Kevin Lundeen, Dominic Burgi
@@ -13,7 +11,6 @@
 #include "storage_engine.h"
 #include "slotted_page.h"
 #include "heap_file.h"
-
 
 /**
  * @class HeapTable - Heap storage engine (implementation of DbRelation)

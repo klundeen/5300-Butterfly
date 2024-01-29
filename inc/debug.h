@@ -1,6 +1,8 @@
-// Debug utilities for SQL DB manager
-// Dominic Burgi
-// CPSC 5300 - Butterfly
+/**
+ * @file debuge.h - Common debug macros
+ * @author Kevin Lundeen, Dominic Burgi
+ * @see "Seattle University, CPSC5300, Winter Quarter 2024"
+ */
 
 #ifndef DEBUG_H
 #define DEBUG_H

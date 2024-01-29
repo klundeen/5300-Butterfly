@@ -1,4 +1,10 @@
-
+/**
+ * @file slotted_page.h - Implementation of storage_engine block.
+ * SlottedPage: DbBlock
+ *
+ * @author Kevin Lundeen, Dominic Burgi
+ * @see "Seattle University, CPSC5300, Winter Quarter 2024"
+ */
 #pragma once
 
 #include "storage_engine.h"

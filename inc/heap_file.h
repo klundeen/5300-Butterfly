@@ -1,3 +1,10 @@
+/**
+ * @file heap_file.h - Implementation of storage_engine with a heap file structure.
+ * HeapFile: DbFile
+ *
+ * @author Kevin Lundeen, Dominic Burgi
+ * @see "Seattle University, CPSC5300, Winter Quarter 2024"
+ */
 #pragma once
 
 #include "db_cxx.h"
