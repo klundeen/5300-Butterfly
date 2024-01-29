@@ -50,6 +50,10 @@ public:
 
     virtual RecordIDs *ids(void);
 
+    u_int16_t get_num_records(void);
+
+    u_int16_t get_end_free(void);
+
 protected:
     u_int16_t num_records;
     u_int16_t end_free;
