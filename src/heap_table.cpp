@@ -5,7 +5,7 @@
 #include "db_cxx.h"
 #include "heap_table.h"
 
-// #define DEBUG_ENABLED
+#define DEBUG_ENABLED
 #include "debug.h"
 
 HeapTable::HeapTable(Identifier table_name, ColumnNames column_names, ColumnAttributes column_attributes) :
@@ -48,15 +48,15 @@ Handle HeapTable::insert(const ValueDict *row) {
 }
 
 void HeapTable::update(const Handle handle, const ValueDict *new_values) {
-
+    // FIXME
 }
 
 void HeapTable::del(const Handle handle) {
-
+    // FIXME
 }
 
-
 Handles* HeapTable::select() {
+    DEBUG_OUT("HeapTable::select()\n");
     Handles* handles = new Handles();
     BlockIDs* block_ids = file.block_ids();
     for (auto const& block_id: *block_ids) {
@@ -72,16 +72,26 @@ Handles* HeapTable::select() {
     return handles;
 }
 
+
+
 Handles* HeapTable::select(const ValueDict* where) {
-    DEBUG_OUT("HeapTable::select(where) FIXME\n");
-    Handles* handles = new Handles();
-    BlockIDs* block_ids = file.block_ids();
+    DEBUG_OUT("HeapTable::select(where)\n");
+    Handles *handles = new Handles();
+    BlockIDs *block_ids = file.block_ids();
     for (auto const& block_id: *block_ids) {
-        SlottedPage* block = file.get(block_id);
-        RecordIDs* record_ids = block->ids();
+        SlottedPage *block = file.get(block_id);
+        RecordIDs *record_ids = block->ids();
         for (auto const& record_id: *record_ids) {
-            // FIXME, need to only return WHERE qualified record...
-            handles->push_back(Handle(block_id, record_id));
+            Dbt *record = block->get(record_id);
+            if (record == nullptr) {
+                continue;
+            }
+
+            ValueDict *unmarshalled_record = this->unmarshal(record);
+            if ((where == nullptr) || satisfies_where(*unmarshalled_record, *where)) {
+                DEBUG_OUT("HeapTable::select(where) - Found a viable record\n");
+                handles->push_back(Handle(block_id, record_id));
+            }
         }
         delete record_ids;
         delete block;
@@ -92,11 +102,13 @@ Handles* HeapTable::select(const ValueDict* where) {
 
 
 ValueDict *HeapTable::project(Handle handle) {
+    DEBUG_OUT("HeapTable::project(handle)\n");
     return this->project(handle, &this->column_names);
 }
 
 
 ValueDict *HeapTable::project(Handle handle, const ColumnNames *column_names) {
+    DEBUG_OUT("HeapTable::project(handle, column_names)\n");
     BlockID block_id = handle.first;
     RecordID record_id = handle.second;
 
@@ -122,6 +134,7 @@ ValueDict *HeapTable::project(Handle handle, const ColumnNames *column_names) {
 
 
 ValueDict *HeapTable::validate(const ValueDict *row) {
+    DEBUG_OUT("HeapTable::validate(handle)\n");
     ValueDict *full_row = new ValueDict();
     for (auto const& col : this->column_names) {
         auto const &it = row->find(col);
@@ -231,4 +244,9 @@ ValueDict *HeapTable::unmarshal(Dbt *data) {
     }
 
     return row;
+}
+
+bool HeapTable::satisfies_where(const ValueDict& record, const ValueDict& where) {
+
+    return true;
 }

@@ -4,7 +4,7 @@
 #include "slotted_page.h"
 #include "db_cxx.h"
 
-// #define debug_enabled
+#define DEBUG_ENABLED
 #include "debug.h"
 
 const uint8_t HEADER_SIZE = 4;
@@ -67,6 +67,7 @@ void SlottedPage::put_header(RecordID id, u16 size, u16 loc) {
 
 // Get a record from the block. Return nullptr if it has been deleted.
 Dbt *SlottedPage::get(RecordID record_id) {
+    DEBUG_OUT_VAR("SlottedPage::get(%u)\n", record_id);
     u16 size = 0;
     u16 loc = 0;
     this->get_header(size, loc, record_id);
@@ -82,6 +83,7 @@ Dbt *SlottedPage::get(RecordID record_id) {
 
 // Replace the record with the given data. Raises DbBlockNoRoomError if it won't fit.
 void SlottedPage::put(RecordID record_id, const Dbt &data) {
+    DEBUG_OUT_VAR("SlottedPage::put(%u)\n", record_id);
     u16 size = 0;
     u16 loc = 0;
     this->get_header(size, loc, record_id);
@@ -104,6 +106,7 @@ void SlottedPage::put(RecordID record_id, const Dbt &data) {
 // Mark the given id as deleted by changing its size to zero and its location to 0.
 // Compact the rest of the data in the block. But keep the record ids the same for everyone.
 void SlottedPage::del(RecordID record_id) {
+    DEBUG_OUT_VAR("SlottedPage::del(%u)\n", record_id);
     u16 size = 0;
     u16 loc = 0;
     this->get_header(size, loc, record_id);
@@ -113,6 +116,14 @@ void SlottedPage::del(RecordID record_id) {
 
 // Sequence of all non-deleted record ids. """
 RecordIDs *SlottedPage::ids(void) {
+    // DEBUG_OUT("SlottedPage::ids()\n");
+    // RecordIDs* record_ids = new RecordIDs();
+    // for (RecordID i = 0; i < this->num_records; i++) {
+    //     Dbt *record = this->get(i);
+    //     if (record != nullptr) {
+    //         record_ids->push_back(i);
+    //     }
+    // }
     RecordIDs* record_ids = new RecordIDs(this->num_records + 1);
     iota(record_ids->begin(), record_ids->end(), 1);
     return record_ids;

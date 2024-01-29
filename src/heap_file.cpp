@@ -4,7 +4,7 @@
 #include "slotted_page.h"
 #include "db_cxx.h"
 
-// #define debug_enabled
+#define DEBUG_ENABLED
 #include "debug.h"
 
 void HeapFile::create(void) {

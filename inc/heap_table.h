@@ -64,4 +64,6 @@ protected:
     virtual Dbt *marshal(const ValueDict *row);
 
     virtual ValueDict *unmarshal(Dbt *data);
+
+    bool satisfies_where(const ValueDict& record, const ValueDict& where);
 };
