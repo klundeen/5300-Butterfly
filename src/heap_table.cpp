@@ -1,21 +1,31 @@
-
+/**
+ * @file heap_table.cpp - Implementation of storage_engine with a heap file structure.
+ * HeapTable: DbRelation
+ *
+ * @author Kevin Lundeen, Dominic Burgi
+ * @see "Seattle University, CPSC5300, Winter Quarter 2024"
+ */
 #include <cstring>
 #include <numeric>
 
 #include "db_cxx.h"
 #include "heap_table.h"
 
-#define DEBUG_ENABLED
+// #define DEBUG_ENABLED
 #include "debug.h"
 
 HeapTable::HeapTable(Identifier table_name, ColumnNames column_names, ColumnAttributes column_attributes) :
     DbRelation(table_name, column_names, column_attributes), file(table_name) {}
 
+// Execute: CREATE TABLE <table_name> ( <columns> )
+// Is not responsible for metadata storage or validation.
 void HeapTable::create() {
     DEBUG_OUT("HeapTable::create()\n");
     this->file.create();
 }
 
+// Execute: CREATE TABLE IF NOT EXISTS <table_name> ( <columns> )
+// Is not responsible for metadata storage or validation.
 void HeapTable::create_if_not_exists() {
     DEBUG_OUT("HeapTable::create_if_not_exists()\n");
     try {
@@ -27,18 +37,24 @@ void HeapTable::create_if_not_exists() {
     }
 }
 
+// Execute: DROP TABLE <table_name>
 void HeapTable::drop() {
     this->file.drop();
 }
 
+// Open existing table. Enables: insert, update, delete, select, project
 void HeapTable::open() {
     this->file.open();
 }
 
+// Closes the table. Disables: insert, update, delete, select, project
 void HeapTable::close() {
     this->file.close();
 }
 
+// Expect row to be a dictionary with column name keys.
+// Execute: INSERT INTO <table_name> (<row_keys>) VALUES (<row_values>)
+// Return the handle of the inserted row.
 Handle HeapTable::insert(const ValueDict *row) {
     this->open();
     ValueDict *val = this->validate(row);
@@ -47,14 +63,23 @@ Handle HeapTable::insert(const ValueDict *row) {
     return handle;
 }
 
+// Expect new_values to be a dictionary with column name keys.
+// Conceptually, execute: UPDATE INTO <table_name> SET <new_values> WHERE <handle>
+// where handle is sufficient to identify one specific record (e.g., returned from an insert
+// or select).
 void HeapTable::update(const Handle handle, const ValueDict *new_values) {
     // FIXME
 }
 
+// Conceptually, execute: DELETE FROM <table_name> WHERE <handle>
+// where handle is sufficient to identify one specific record (e.g., returned from an insert
+// or select).
 void HeapTable::del(const Handle handle) {
     // FIXME
 }
 
+// Conceptually, execute: SELECT <handle> FROM <table_name>
+// Returns a list of handles for qualifying rows.
 Handles* HeapTable::select() {
     DEBUG_OUT("HeapTable::select()\n");
     Handles* handles = new Handles();
@@ -72,8 +97,8 @@ Handles* HeapTable::select() {
     return handles;
 }
 
-
-
+// Conceptually, execute: SELECT <handle> FROM <table_name> WHERE <where>
+// Returns a list of handles for qualifying rows.
 Handles* HeapTable::select(const ValueDict* where) {
     DEBUG_OUT("HeapTable::select(where)\n");
     Handles *handles = new Handles();
@@ -100,13 +125,13 @@ Handles* HeapTable::select(const ValueDict* where) {
     return handles;
 }
 
-
+// Return a sequence of values for handle.
 ValueDict *HeapTable::project(Handle handle) {
     DEBUG_OUT("HeapTable::project(handle)\n");
     return this->project(handle, &this->column_names);
 }
 
-
+// Return a sequence of values for handle given by column_names.
 ValueDict *HeapTable::project(Handle handle, const ColumnNames *column_names) {
     DEBUG_OUT("HeapTable::project(handle, column_names)\n");
     BlockID block_id = handle.first;
@@ -132,7 +157,8 @@ ValueDict *HeapTable::project(Handle handle, const ColumnNames *column_names) {
     return proj_rows;
 }
 
-
+// Check if the given row is acceptable to insert. Raise error if not.
+// Otherwise return the full row dictionary.
 ValueDict *HeapTable::validate(const ValueDict *row) {
     DEBUG_OUT("HeapTable::validate(handle)\n");
     ValueDict *full_row = new ValueDict();
@@ -147,6 +173,7 @@ ValueDict *HeapTable::validate(const ValueDict *row) {
     return full_row;
 }
 
+// Assumes row is fully fleshed-out. Appends a record to the file.
 Handle HeapTable::append(const ValueDict *row) {
     DEBUG_OUT("HeapTable::append()\n");
     Dbt *data = this->marshal(row);
@@ -170,8 +197,8 @@ Handle HeapTable::append(const ValueDict *row) {
 }
 
 
-// return the bits to go into the file
-// caller responsible for freeing the returned Dbt and its enclosed ret->get_data().
+// Return the bits to go into the file
+// Caller responsible for freeing the returned Dbt and its enclosed ret->get_data().
 Dbt *HeapTable::marshal(const ValueDict* row) {
     DEBUG_OUT("HeapTable::marshal()\n");
     char *bytes = new char[DbBlock::BLOCK_SZ]; // more than we need (we insist that one row fits into DbBlock::BLOCK_SZ)
@@ -203,6 +230,8 @@ Dbt *HeapTable::marshal(const ValueDict* row) {
     return data;
 }
 
+// Return the data to taken from the file
+// Caller responsible for freeing the returned ValueDict
 ValueDict *HeapTable::unmarshal(Dbt *data) {
     DEBUG_OUT("HeapTable::unmarshal()\n");
     ValueDict *row = new ValueDict();
@@ -246,7 +275,8 @@ ValueDict *HeapTable::unmarshal(Dbt *data) {
     return row;
 }
 
+// Helper that returns true if a record satisfies a WHERE clause.
 bool HeapTable::satisfies_where(const ValueDict& record, const ValueDict& where) {
-
+    // FIXME
     return true;
 }

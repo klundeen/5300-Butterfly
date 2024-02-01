@@ -1,10 +1,17 @@
+/**
+ * @file slotted_page.cpp - Implementation of storage_engine block.
+ * SlottedPage: DbBlock
+ *
+ * @author Kevin Lundeen, Dominic Burgi
+ * @see "Seattle University, CPSC5300, Winter Quarter 2024"
+ */
 #include <cstring>
 #include <numeric>
 #include "heap_table.h"
 #include "slotted_page.h"
 #include "db_cxx.h"
 
-#define DEBUG_ENABLED
+// #define DEBUG_ENABLED
 #include "debug.h"
 
 const uint8_t HEADER_SIZE = 4;
@@ -50,7 +57,6 @@ void SlottedPage::get_header(u_int16_t &size, u_int16_t &loc, RecordID id) {
     DEBUG_OUT_VAR("get_header(id=%u)\n", id);
     size = this->get_n(HEADER_SIZE * id);
     loc = this->get_n(HEADER_SIZE * id + 2);
-    DEBUG_OUT_VAR("Assigning size:%u loc:%u\n", size, loc);
 }
 
 // Store the size and offset for given id. For id of zero, store the block header.
@@ -114,18 +120,21 @@ void SlottedPage::del(RecordID record_id) {
     this->slide(loc, loc + size);
 }
 
-// Sequence of all non-deleted record ids. """
+// Sequence of all non-deleted record ids.
 RecordIDs *SlottedPage::ids(void) {
-    // DEBUG_OUT("SlottedPage::ids()\n");
-    // RecordIDs* record_ids = new RecordIDs();
-    // for (RecordID i = 0; i < this->num_records; i++) {
-    //     Dbt *record = this->get(i);
-    //     if (record != nullptr) {
-    //         record_ids->push_back(i);
-    //     }
-    // }
-    RecordIDs* record_ids = new RecordIDs(this->num_records + 1);
-    iota(record_ids->begin(), record_ids->end(), 1);
+    DEBUG_OUT("SlottedPage::ids()\n");
+    RecordIDs *record_ids = new RecordIDs();
+    for (RecordID id = 1; id <= this->num_records; id++)
+    {
+        u_int16_t size = 0;
+        u_int16_t loc = 0;
+        this->get_header(size, loc, id);
+        if (loc != 0)
+        {
+            record_ids->push_back(id);
+        }
+    }
+
     return record_ids;
 }
 
@@ -188,10 +197,12 @@ void* SlottedPage::address(u16 offset) {
     return (void*)((char*)this->block.get_data() + offset);
 }
 
+// Returns the number of records in the slotted page.
 u_int16_t SlottedPage::get_num_records() {
     return this->num_records;
 }
 
+// Returns the end of the free space in the slotted page.
 u_int16_t SlottedPage::get_end_free() {
     return this->end_free;
 }
