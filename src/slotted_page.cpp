@@ -18,7 +18,7 @@ const uint8_t HEADER_SIZE = 4;
 
 // Manage a database block that contains several records.
 SlottedPage::SlottedPage(Dbt &block, BlockID block_id, bool is_new) : DbBlock(block, block_id, is_new) {
-    DEBUG_OUT_VAR("SlottedPage(id: %d new:%d)\n", block_id, is_new);
+    DEBUG_OUT_VAR("SlottedPage(id:%d is_new:%d)\n", block_id, is_new);
     if (is_new) {
         DEBUG_OUT("New slotted page, initialize num_records and end_free\n");
         this->num_records = 0;
@@ -96,16 +96,19 @@ void SlottedPage::put(RecordID record_id, const Dbt &data) {
 
     u16 new_size = sizeof(data);
     if (new_size > size) {
-    u16 extra = new_size - size;
+        DEBUG_OUT("New record is bigger than existing\n");
+        u16 extra = new_size - size;
         if (!this->has_room(extra)) {
             throw DbBlockNoRoomError("Not enough room for new record");
         }
-        this->slide(loc, loc - new_size);
-        memcpy(this->address(loc - new_size), data.get_data(), new_size);
+        this->slide(loc, loc - extra);
+        memmove(this->address(loc - extra), data.get_data(), (extra + size));
     } else {
-        memcpy(this->address(loc), data.get_data(), new_size);
+        DEBUG_OUT("New record is smaller than existing\n");
+        memmove(this->address(loc), data.get_data(), new_size);
+        this->slide(loc + new_size, loc + size);
     }
-    this->put_header();
+    this->get_header(size, loc, record_id);
     this->put_header(record_id, new_size, loc);
 }
 
@@ -153,56 +156,60 @@ bool SlottedPage::has_room(u_int16_t size) {
 // by sliding data that is to the left of start to the left.
 // Also fix up any record headers whose data has slid. Assumes there is enough room if it is a left
 // shift (end < start).
-void SlottedPage::slide(u_int16_t start, u_int16_t end) {
-    DEBUG_OUT("SlottedPage::slide()\n");
+void SlottedPage::slide(u_int16_t start, u_int16_t end)
+{
+    DEBUG_OUT_VAR("SlottedPage::slide(%u, %u)\n", start, end);
     int shift = end - start;
     if (0 == shift) {
         return;
     }
 
     // Identify the start of the block, and move it
-    u16 block_start = this->end_free + 1;
-    memmove(address(block_start + shift), address(block_start), abs(shift));
+    memmove(this->address(this->end_free + shift + 1), this->address(this->end_free + 1), start - (this->end_free + 1));
 
     // Shift each record within the block
     RecordIDs *records = this->ids();
     for (RecordID &it : *records) {
         u16 size = 0;
         u16 loc = 0;
-        get_header(size, loc, it);
+        this->get_header(size, loc, it);
         if (loc <= start) {
             loc += shift;
-            put_header(it, size, loc);
+            this->put_header(it, size, loc);
         }
     }
 
-    // Record updates back to the block header
     this->end_free += shift;
-    put_header();
+    this->put_header();
     delete records;
-}
+};
 
 // Get 2-byte integer at given offset in block.
 u16 SlottedPage::get_n(u16 offset) {
+    DEBUG_OUT_VAR("SlottedPage::get_n(%u)\n", offset);
     return *(u16*)this->address(offset);
 }
 
 // Put a 2-byte integer at given offset in block.
 void SlottedPage::put_n(u16 offset, u16 n) {
+    DEBUG_OUT_VAR("SlottedPage::put_n(%u, %u)\n", offset, n);
     *(u16*)this->address(offset) = n;
 }
 
 // Make a void* pointer for a given offset into the data block.
 void* SlottedPage::address(u16 offset) {
+    DEBUG_OUT_VAR("SlottedPage::address(%u)\n", offset);
     return (void*)((char*)this->block.get_data() + offset);
 }
 
 // Returns the number of records in the slotted page.
 u_int16_t SlottedPage::get_num_records() {
+    DEBUG_OUT("SlottedPage::get_num_records()\n");
     return this->num_records;
 }
 
 // Returns the end of the free space in the slotted page.
 u_int16_t SlottedPage::get_end_free() {
+    DEBUG_OUT("SlottedPage::get_end_free()\n");
     return this->end_free;
 }

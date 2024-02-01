@@ -24,6 +24,7 @@ unsigned int const BLOCK_SZ = 100;
 SqlExec::SqlExec(): cout_buf(cout.rdbuf()) {}
 
 void SqlExec::Execute(const SQLStatement* stmt) {
+    DEBUG_OUT("SqlExec::Execute()\n");
     switch (stmt->type())
     {
     case kStmtSelect:   PrintSelectStatementInfo((const SelectStatement*)stmt); break;
@@ -34,6 +35,7 @@ void SqlExec::Execute(const SQLStatement* stmt) {
 
 void SqlExec::PrintSelectStatementInfo(const SelectStatement* stmt)
 {
+    DEBUG_OUT("SqlExec::PrintSelectStatementInfo()\n");
     string ret("SELECT");
     ret += SelectListToString(stmt->selectList);
     ret += " FROM";
@@ -49,6 +51,7 @@ void SqlExec::PrintSelectStatementInfo(const SelectStatement* stmt)
 
 string SqlExec::TableRefToString(TableRef* tableRef)
 {
+    DEBUG_OUT("SqlExec::TableRefToString()\n");
     string ret;
     if (tableRef->join != NULL)
     {
@@ -84,6 +87,7 @@ string SqlExec::TableRefToString(TableRef* tableRef)
 
 string SqlExec::JoinDefToString(JoinDefinition* joinDef)
 {
+    DEBUG_OUT("SqlExec::JoinDefToString()\n");
     string ret(" ");
     if (joinDef->left->alias != NULL)
     {
@@ -107,6 +111,7 @@ string SqlExec::JoinDefToString(JoinDefinition* joinDef)
 
 string SqlExec::JoinTypeToString(JoinType type)
 {
+    DEBUG_OUT("SqlExec::JoinTypeToString()\n");
     string ret;
     switch(type)
     {
@@ -126,6 +131,7 @@ string SqlExec::JoinTypeToString(JoinType type)
 
 string SqlExec::SelectListToString(vector<Expr*>* selectList)
 {
+    DEBUG_OUT("SqlExec::SelectListToString()\n");
     string ret;
     for (size_t i = 0; i < selectList->size(); i++)
     {
@@ -140,7 +146,7 @@ string SqlExec::SelectListToString(vector<Expr*>* selectList)
 
 string SqlExec::ExprToString(Expr* expr)
 {
-    DEBUG_OUT_VAR("Expr type?: %d\n", expr->type);
+    DEBUG_OUT_VAR("SqlExec::ExprToString() (type: %d)\n", expr->type);
     string ret(" ");
     switch(expr->type)
     {
@@ -170,7 +176,7 @@ string SqlExec::ExprToString(Expr* expr)
 
 string SqlExec::OpToString(Expr* op)
 {
-    DEBUG_OUT_VAR("OpToString type: %d\n", op->opType);
+    DEBUG_OUT_VAR("OpToString (type: %d)\n", op->opType);
     string ret;
     switch(op->opType)
     {
@@ -188,6 +194,7 @@ string SqlExec::OpToString(Expr* op)
 
 void SqlExec::PrintCreateStatementInfo(const CreateStatement* stmt)
 {
+    DEBUG_OUT("SqlExec::PrintCreateStatementInfo()\n");
     string ret("CREATE");
     ret += CreateTypeToString(stmt->type);
     if (stmt->type != CreateStatement::CreateType::kTable)
@@ -215,6 +222,7 @@ void SqlExec::PrintCreateStatementInfo(const CreateStatement* stmt)
 
 string SqlExec::CreateTypeToString(const CreateStatement::CreateType type)
 {
+    DEBUG_OUT("SqlExec::CreateTypeToString()\n");
     string ret(" ");
     switch(type)
     {
@@ -230,6 +238,7 @@ string SqlExec::CreateTypeToString(const CreateStatement::CreateType type)
 
 string SqlExec::ColumnDefinitionToString(const ColumnDefinition *col)
 {
+    DEBUG_OUT("SqlExec::ColumnDefinitionToString()\n");
     string ret(col->name);
     switch(col->type)
     {
