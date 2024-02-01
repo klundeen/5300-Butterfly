@@ -9,7 +9,7 @@
 #include "heap_table.h"
 #include "heap_storage-test.h"
 
-// #define DEBUG_ENABLED
+#define DEBUG_ENABLED
 #include "debug.h"
 
 #define PASS true
@@ -27,38 +27,52 @@ static void initialize_columns(ColumnNames &c_names, ColumnAttributes &c_attrs) 
     c_attrs.push_back(ca);
 }
 
-static bool create_drop(ColumnNames c_names, ColumnAttributes&c_attrs) {
-    HeapTable table1("_test_create_drop_cpp", c_names, c_attrs);
+static bool test_table_create_drop() {
+    DEBUG_OUT("--- Testing HeapTable : Create/Drop ---\n");
+    ColumnNames c_names;
+    ColumnAttributes c_attrs;
+    initialize_columns(c_names, c_attrs);
+
+    HeapTable table1("_test_table_create_drop_cpp", c_names, c_attrs);
     table1.create();
-    std::cout << "create ok" << std::endl;
+    DEBUG_OUT("create ok\n");
     table1.drop();  // drop makes the object unusable because of BerkeleyDB restriction -- maybe want to fix this some day
-    std::cout << "drop ok" << std::endl;
+    DEBUG_OUT("drop ok\n");
     return PASS;
 }
 
-static bool test_data(ColumnNames c_names, ColumnAttributes&c_attrs) {
+static bool test_table_data() {
+    DEBUG_OUT("--- Testing HeapTable : Data Usage ---\n");
+    ColumnNames c_names;
+    ColumnAttributes c_attrs;
+    initialize_columns(c_names, c_attrs);
     HeapTable table("_test_data_cpp", c_names, c_attrs);
     table.create_if_not_exists();
-    std::cout << "create_if_not_exsts ok" << std::endl;
+    DEBUG_OUT("create_if_not_exsts ok\n");
 
     ValueDict row;
     row["a"] = Value(12);
     row["b"] = Value("Hello!");
-    std::cout << "try insert" << std::endl;
+    DEBUG_OUT("try insert\n");
     table.insert(&row);
-    std::cout << "insert ok" << std::endl;
+    DEBUG_OUT("insert ok\n");
     Handles* handles = table.select();
-    std::cout << "select ok " << handles->size() << std::endl;
+    DEBUG_OUT_VAR("select ok (size:%lu)\n", handles->size());
     ValueDict *result = table.project((*handles)[0]);
-    std::cout << "project ok" << std::endl;
+    DEBUG_OUT("project ok\n");
+    if (nullptr == result)
+    {
+        DEBUG_OUT("project returned null\n.");
+        return FAIL;
+    }
     Value value = (*result)["a"];
-    if (value.n != 12)
+    if (12 != value.n)
     {
         DEBUG_OUT_VAR("value.n != 12, was: %d\n", value.n);
         return FAIL;
     }
     value = (*result)["b"];
-    if (value.s != "Hello!")
+    if ("Hello!" != value.s)
     {
         DEBUG_OUT("value.s != 'Hello!' was TRUE\n");
         return FAIL;
@@ -70,15 +84,55 @@ static bool test_data(ColumnNames c_names, ColumnAttributes&c_attrs) {
     return PASS;
 }
 
+static bool test_file() {
+    DEBUG_OUT("--- Testing HeapFile ---\n");
+
+    uint expectedPageId = 1;
+
+    HeapFile hf("_file_test");
+    hf.create();
+    hf.open();
+    if (expectedPageId != hf.get_last_block_id()) {
+        DEBUG_OUT("last block id was not 1...\n");
+        return FAIL;
+    }
+
+    SlottedPage* page = hf.get_new();
+    expectedPageId++;
+
+    if (nullptr == page) {
+        DEBUG_OUT("get_new() returned a NULL page...\n");
+        return FAIL;
+    }
+
+    if (expectedPageId != hf.get_last_block_id()) {
+        DEBUG_OUT("get_new() did not increment block id...\n");
+        return FAIL;
+    }
+
+    uint curBlockId = page->get_block_id();
+    SlottedPage* retrieved = hf.get(curBlockId);
+
+    if(nullptr == retrieved) {
+        DEBUG_OUT("Retrieve attempt returned NULL page...\n");
+        return FAIL;
+    }
+    
+    if(curBlockId != retrieved->get_block_id()) {
+        DEBUG_OUT("Retrieved block ID did not match requested...\n");
+        return FAIL;
+    }
+
+    hf.drop();
+    return PASS;
+}
+
 bool test_heap_storage() {
     DEBUG_OUT("Beginning of test_heap_storage\n");
 
-    ColumnNames column_names;
-    ColumnAttributes column_attributes;
-    initialize_columns(column_names, column_attributes);
+    bool result = (test_table_create_drop() &&
+                   test_table_data()        &&
+                   test_file());
 
-    if (create_drop(column_names, column_attributes) == FAIL) {return FAIL;}
-    if (test_data(column_names, column_attributes) == FAIL) {return FAIL;}
-
-    return PASS;
+    return result;
 }

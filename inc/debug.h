@@ -13,11 +13,11 @@
 #ifdef DEBUG_ENABLED
 #define DEBUG_OUT(input)                                        \
     do {                                                        \
-        printf("[%18s:%-3d] %s", __FILE__, __LINE__, input);    \
+        printf("[%26s:%-4d] %s", __FILE__, __LINE__, input);    \
     } while (0)
 #define DEBUG_OUT_VAR(fmt, ...)                                         \
     do {                                                                \
-        printf("[%18s:%-3d] " fmt, __FILE__, __LINE__, __VA_ARGS__);    \
+        printf("[%26s:%-4d] " fmt, __FILE__, __LINE__, __VA_ARGS__);    \
     } while (0)
 #else
 #define DEBUG_OUT(input)

@@ -52,6 +52,7 @@ SlottedPage* HeapFile::get_new(void) {
     Dbt data(block, sizeof(block));
 
     int block_id = ++this->last;
+    DEBUG_OUT_VAR("Assigning block_id: %d\n", block_id);
     Dbt key(&block_id, sizeof(block_id));
 
     // write out an empty block and read it back in so Berkeley DB is managing the memory

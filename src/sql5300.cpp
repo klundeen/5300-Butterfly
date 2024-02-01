@@ -15,6 +15,9 @@
 #include "sql_exec.h"
 #include "heap_storage-test.h"
 
+// #define DEBUG_ENABLED
+#include "debug.h"
+
 using namespace std;
 using namespace hsql;
 
@@ -28,14 +31,14 @@ DbEnv *_DB_ENV;
  * @args dbenvpath  the path to the BerkeleyDB database environment
  */
 int main(int argc, char *argv[]) {
-
+    DEBUG_OUT("sql5300 - BEGIN\n");
     // Open/create the db enviroment
     if (argc != 2) {
         cerr << "Usage: cpsc5300: dbenvpath" << endl;
         return 1;
     }
     char *envHome = argv[1];
-    cout << "(sql5300: running with database environment at " << envHome << ")" << endl;
+    DEBUG_OUT_VAR("(sql5300: running with database environment at %s\n", envHome);
     DbEnv env(0U);
     env.set_message_stream(&cout);
     env.set_error_stream(&cerr);
@@ -57,7 +60,7 @@ int main(int argc, char *argv[]) {
         if (query == "quit")
             break;  // only way to get out
         if (query == "test") {
-            cout << "test_heap_storage: " << (test_heap_storage() ? "ok" : "failed") << endl;
+            cout << "test_heap_storage:\n" << (test_heap_storage() ? "PASS" : "FAIL") << endl;
             continue;
         }
 
@@ -76,6 +79,8 @@ int main(int argc, char *argv[]) {
         }
         delete result;
     }
+
+    DEBUG_OUT("sql5300 - END\n");
     return EXIT_SUCCESS;
 }
 

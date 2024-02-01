@@ -28,6 +28,6 @@ To clean the build and remove binary objects, call make clean:
 `make clean`
 
 ## Troubleshooting
-To enable debug print statments in any cpp file, uncomment the DEBUG_ENABLE defintion:
+To enable debug print statments in any cpp file, uncomment the DEBUG_ENABLED definition:
 
-`#define DEBUG_ENABLE`
+`#define DEBUG_ENABLED`
