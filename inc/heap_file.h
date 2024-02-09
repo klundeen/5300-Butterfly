@@ -2,13 +2,12 @@
  * @file heap_file.h - Implementation of storage_engine with a heap file structure.
  * HeapFile: DbFile
  *
- * @author Kevin Lundeen, Dominic Burgi
+ * @author Kevin Lundeen
  * @see "Seattle University, CPSC5300, Winter Quarter 2024"
  */
 #pragma once
 
 #include "db_cxx.h"
-#include "storage_engine.h"
 #include "slotted_page.h"
 
 
@@ -22,7 +21,7 @@
  */
 class HeapFile : public DbFile {
 public:
-    HeapFile(std::string name) : DbFile(name), dbfilename(""), last(0), closed(true), db(_DB_ENV, 0) {}
+    HeapFile(std::string name);
 
     virtual ~HeapFile() {}
 
@@ -48,15 +47,21 @@ public:
 
     virtual void put(DbBlock *block);
 
-    virtual BlockIDs *block_ids();
+    virtual BlockIDs *block_ids() const;
 
-    virtual u_int32_t get_last_block_id() { return last; }
+    /**
+     * Get the id of the current final block in the heap file.
+     * @return block id of last block
+     */
+    virtual uint32_t get_last_block_id() { return last; }
 
 protected:
     std::string dbfilename;
-    u_int32_t last;
+    uint32_t last;
     bool closed;
     Db db;
 
     virtual void db_open(uint flags = 0);
+
+    virtual uint32_t get_block_count();
 };
