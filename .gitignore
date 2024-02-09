@@ -35,3 +35,14 @@ tests
 
 # Log outputs
 *.log
+
+# IDEs
+.vscode
+
+# Miscellaneous
+data/
+build/
+external/
+refactor/
+backup/
+utilities/
