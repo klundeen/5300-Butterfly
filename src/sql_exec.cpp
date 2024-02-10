@@ -130,7 +130,28 @@ QueryResult *SQLExec::create(const CreateStatement *statement) {
 
 // DROP ...
 QueryResult *SQLExec::drop(const DropStatement *statement) {
-    return new QueryResult("not implemented");  // FIXME
+    if (statement->type != DropStatement::kTable)
+        throw SQLExecError("unrecognized DROP type");
+
+    string tableName = string(statement->name);
+    ValueDict where;
+    where[TABLE_NAME_COLUMN] = Value(tableName);
+    
+    HeapTable *table = static_cast<HeapTable *>(&tables->get_table(tableName));
+    
+    Columns *columns =
+        static_cast<Columns *>(&tables->get_table(Columns::TABLE_NAME));
+    Handles * handles = columns->select(&where);
+    for (Handle const &handle : *handles)
+        columns->del(handle);
+    
+    delete handles;
+
+    table->drop();
+    
+    tables->del(*tables->select(&where)->begin());
+
+    return new QueryResult(string("dropped ") + tableName);  // FIXME
 }
 
 QueryResult *SQLExec::show(const ShowStatement *statement) {
