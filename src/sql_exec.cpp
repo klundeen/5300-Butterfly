@@ -125,10 +125,12 @@ QueryResult *SQLExec::create(const CreateStatement *statement) {
         throw e;
     }
 
+    HeapTable *table = static_cast<HeapTable *>(&tables->get_table(tableName));
+    table->create();
+
     return new QueryResult("created " + string(statement->tableName) + "\n");
 }
 
-// DROP ...
 QueryResult *SQLExec::drop(const DropStatement *statement) {
     if (statement->type != DropStatement::kTable)
         throw SQLExecError("unrecognized DROP type");
