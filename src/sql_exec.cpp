@@ -46,21 +46,23 @@ ostream &operator<<(ostream &out, const QueryResult &qres) {
 }
 
 QueryResult::~QueryResult() {
-    // FIXME
+    delete column_names;
+    delete column_attributes;
+    for (auto row : *rows) delete row;
+    delete rows;
 }
 
-
 QueryResult *SQLExec::execute(const SQLStatement *statement) {
-    // FIXME: initialize _tables table, if not yet present
+    if (!tables) tables = new Tables();
 
     try {
         switch (statement->type()) {
             case kStmtCreate:
-                return create((const CreateStatement *) statement);
+                return create((const CreateStatement *)statement);
             case kStmtDrop:
-                return drop((const DropStatement *) statement);
+                return drop((const DropStatement *)statement);
             case kStmtShow:
-                return show((const ShowStatement *) statement);
+                return show((const ShowStatement *)statement);
             default:
                 return new QueryResult("not implemented");
         }
@@ -80,19 +82,63 @@ QueryResult *SQLExec::create(const CreateStatement *statement) {
 
 // DROP ...
 QueryResult *SQLExec::drop(const DropStatement *statement) {
-    return new QueryResult("not implemented"); // FIXME
+    return new QueryResult("not implemented");  // FIXME
 }
 
 QueryResult *SQLExec::show(const ShowStatement *statement) {
-    return new QueryResult("not implemented"); // FIXME
+    switch (statement->type) {
+        case ShowStatement::kTables:
+            return show_tables();
+        case ShowStatement::kColumns:
+            return show_columns(statement);
+        case ShowStatement::kIndex:
+            return show_index(statement);
+        default:
+            throw SQLExecError("Unknown type in SHOW statement");
+    }
+}
+
+string return_msg(int num_rows) {
+    return "successfully returned " + to_string(num_rows) + " rows\n";
 }
 
 QueryResult *SQLExec::show_tables() {
-    return new QueryResult("not implemented"); // FIXME
+    ColumnAttributes *column_attributes = new ColumnAttributes();
+    ColumnNames *column_names = new ColumnNames();
+    ValueDicts *rows = new ValueDicts();
+
+    Handles *handles = tables->select();
+    for (Handle const &handle : *handles)
+        rows->emplace_back(tables->project(handle));
+    tables->get_columns(Tables::TABLE_NAME, *column_names, *column_attributes);
+
+    delete handles;
+
+    return new QueryResult(column_names, column_attributes, rows,
+                           return_msg(rows->size()));
 }
 
 QueryResult *SQLExec::show_columns(const ShowStatement *statement) {
-    return new QueryResult("not implemented"); // FIXME
+    ColumnAttributes *column_attributes = new ColumnAttributes();
+    ColumnNames *column_names = new ColumnNames();
+    ValueDicts *rows = new ValueDicts();
+
+    Columns *columns =
+        static_cast<Columns *>(&tables->get_table(Columns::TABLE_NAME));
+    for (auto const &column_name : columns->get_column_names())
+        column_names->emplace_back(column_name);
+
+    ValueDict where;
+    where["table_name"] = string(statement->tableName);
+
+    Handles *handles = columns->select(&where);
+    for (Handle const &handle : *handles)
+        rows->emplace_back(columns->project(handle));
+
+    delete handles;
+
+    return new QueryResult(column_names, column_attributes, rows,
+                           return_msg(rows->size()));
 }
 
 QueryResult *SQLExec::show_index(const ShowStatement *statement) {
@@ -102,5 +148,3 @@ QueryResult *SQLExec::show_index(const ShowStatement *statement) {
 QueryResult *SQLExec::drop_index(const DropStatement *statement) {
     return new QueryResult("drop index not implemented");  // FIXME
 }
-
-
