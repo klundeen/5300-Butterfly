@@ -8,6 +8,11 @@
 using namespace std;
 using namespace hsql;
 
+// define constraints
+const string TABLE_NAME_COLUMN = "table_name";
+const string COLUMN_NAME_COLUMN = "column_name";
+const string DATA_TYPE_COLUMN = "data_type";
+
 // define static data
 Tables *SQLExec::tables = nullptr;
 
@@ -46,10 +51,12 @@ ostream &operator<<(ostream &out, const QueryResult &qres) {
 }
 
 QueryResult::~QueryResult() {
-    delete column_names;
-    delete column_attributes;
-    for (auto row : *rows) delete row;
-    delete rows;
+    if (column_names) delete column_names;
+    if (column_attributes) delete column_attributes;
+    if (rows) {
+        for (auto row : *rows) delete row;
+        delete rows;
+    }
 }
 
 QueryResult *SQLExec::execute(const SQLStatement *statement) {
@@ -77,7 +84,48 @@ SQLExec::column_definition(const ColumnDefinition *col, Identifier &column_name,
 }
 
 QueryResult *SQLExec::create(const CreateStatement *statement) {
-    return new QueryResult("not implemented"); // FIXME
+    if (statement->type != CreateStatement::kTable)
+        return new QueryResult("Not supported create types");
+    
+    string tableName = string(statement->tableName);
+
+    vector<ValueDict> rows;
+    for (auto const &column : *statement->columns) {
+        string type;
+        if (column->type == ColumnDefinition::DataType::INT)
+            type = "INT";
+        else if (column->type == ColumnDefinition::DataType::TEXT) {
+            type = "TEXT";
+        } else {
+            return new QueryResult("Not supported column type");
+        }
+
+        ValueDict col_row;
+        col_row[TABLE_NAME_COLUMN] = Value(tableName);
+        col_row[COLUMN_NAME_COLUMN] = Value(column->name);
+        col_row[DATA_TYPE_COLUMN] = Value(type);
+        rows.push_back(col_row);
+    }
+
+    ValueDict table_row;
+    table_row[TABLE_NAME_COLUMN] = Value(tableName);
+
+    Columns *columns =
+        static_cast<Columns *>(&tables->get_table(Columns::TABLE_NAME));
+    
+    tables->insert(&table_row);
+    try {
+        for (auto &row : rows) 
+            columns->insert(&row);
+    } catch (DbRelationError &e) {
+        Handles *handles = columns->select(&table_row);
+        for (Handle const &handle : *handles)
+            columns->del(handle);
+        tables->del(*tables->select(&table_row)->begin());
+        throw e;
+    }
+
+    return new QueryResult("created " + string(statement->tableName) + "\n");
 }
 
 // DROP ...
@@ -108,8 +156,13 @@ QueryResult *SQLExec::show_tables() {
     ValueDicts *rows = new ValueDicts();
 
     Handles *handles = tables->select();
-    for (Handle const &handle : *handles)
-        rows->emplace_back(tables->project(handle));
+    for (Handle const &handle : *handles) {
+        ValueDict *row = tables->project(handle);
+        if (row->at(TABLE_NAME_COLUMN).s != Columns::TABLE_NAME &&
+            row->at(TABLE_NAME_COLUMN).s != Tables::TABLE_NAME &&
+            row->at(TABLE_NAME_COLUMN).s != Indices::TABLE_NAME)
+            rows->emplace_back(row);
+    }
     tables->get_columns(Tables::TABLE_NAME, *column_names, *column_attributes);
 
     delete handles;
@@ -129,7 +182,7 @@ QueryResult *SQLExec::show_columns(const ShowStatement *statement) {
         column_names->emplace_back(column_name);
 
     ValueDict where;
-    where["table_name"] = string(statement->tableName);
+    where[TABLE_NAME_COLUMN] = Value(statement->tableName);
 
     Handles *handles = columns->select(&where);
     for (Handle const &handle : *handles)
@@ -142,7 +195,7 @@ QueryResult *SQLExec::show_columns(const ShowStatement *statement) {
 }
 
 QueryResult *SQLExec::show_index(const ShowStatement *statement) {
-     return new QueryResult("show index not implemented"); // FIXME
+    return new QueryResult("show index not implemented");  // FIXME
 }
 
 QueryResult *SQLExec::drop_index(const DropStatement *statement) {
