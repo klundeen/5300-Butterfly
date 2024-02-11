@@ -139,6 +139,8 @@ QueryResult *SQLExec::show_tables() {
             row->at(TABLE_NAME_COLUMN).s != Tables::TABLE_NAME &&
             row->at(TABLE_NAME_COLUMN).s != Indices::TABLE_NAME)
             rows->emplace_back(row);
+        else
+            delete row;
     }
     tables->get_columns(Tables::TABLE_NAME, *column_names, *column_attributes);
 
@@ -308,9 +310,11 @@ void SQLExec::validate_table(char* tableName, bool must_exists = true) {
     ValueDict where;
     where[TABLE_NAME_COLUMN] = Value(tableName);
     Handles *handles = tables->select(&where);
-    if (must_exists && !handles->size())
+    int size = handles->size();
+    delete handles;
+    if (must_exists && !size)
         throw SQLExecError("table " + string(tableName) + " does not exist");
-    if (!must_exists && handles->size()) throw SQLExecError("table " + string(tableName) + " exists ");
+    if (!must_exists && size) throw SQLExecError("table " + string(tableName) + " exists ");
 }
 
 void SQLExec::validate_index(char* indexName, char* tableName, bool must_exists = true) {
@@ -318,8 +322,10 @@ void SQLExec::validate_index(char* indexName, char* tableName, bool must_exists 
     where[TABLE_NAME_COLUMN] = Value(tableName);
     where[INDEX_NAME_COLUMN] = Value(indexName);
     Handles *handles = indices->select(&where);
-    if (must_exists && !handles->size())
+    int size = handles->size();
+    delete handles;
+    if (must_exists && !size)
         throw SQLExecError("Index " + string(indexName) + " does not exist");
-    if (!must_exists && handles->size()) 
+    if (!must_exists && size) 
         throw SQLExecError("Index " + string(indexName) + " exists ");
 }
