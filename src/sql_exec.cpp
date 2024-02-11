@@ -88,8 +88,10 @@ void SQLExec::column_definition(const ColumnDefinition *col, Identifier &column_
 QueryResult *SQLExec::create(const CreateStatement *statement) {
     switch (statement->type) {
         case CreateStatement::kTable:
+            validate_table(statement->tableName, false);
             return create_table(statement);
         case CreateStatement::kIndex:
+            validate_table(statement->tableName);
             return create_index(statement);
         default:
             throw SQLExecError("Not supported CREATE type");
@@ -99,8 +101,11 @@ QueryResult *SQLExec::create(const CreateStatement *statement) {
 QueryResult *SQLExec::drop(const DropStatement *statement) {
     switch (statement->type) {
         case DropStatement::kTable:
+            validate_table(statement->name);
             return drop_table(statement);
         case DropStatement::kIndex:
+            validate_table(statement->name);
+            validate_index(statement->indexName, statement->name);
             return drop_index(statement);
         default:
             throw SQLExecError("Not supported DROP type");
@@ -112,8 +117,10 @@ QueryResult *SQLExec::show(const ShowStatement *statement) {
         case ShowStatement::kTables:
             return show_tables();
         case ShowStatement::kColumns:
+            validate_table(statement->tableName);
             return show_columns(statement);
         case ShowStatement::kIndex:
+            validate_table(statement->tableName);
             return show_index(statement);
         default:
             throw SQLExecError("Unknown type in SHOW statement");
@@ -152,13 +159,7 @@ QueryResult *SQLExec::show_columns(const ShowStatement *statement) {
 
     ValueDict where;
     where[TABLE_NAME_COLUMN] = Value(statement->tableName);
-    // check if table exists
-    Handles *handles = tables->select(&where);
-    if (handles->size() == 0)
-        throw SQLExecError("Table " + string(statement->tableName) + " does not exist");
-    delete handles;
-
-    handles = columns->select(&where);
+    Handles *handles = columns->select(&where);
     for (Handle const &handle : *handles) rows->emplace_back(columns->project(handle));
 
     delete handles;
@@ -177,14 +178,7 @@ QueryResult *SQLExec::show_index(const ShowStatement *statement) {
 
     ValueDict where;
     where[TABLE_NAME_COLUMN] = Value(statement->tableName);
-
-    // check if table exists
-    Handles *handles = tables->select(&where);
-    if (handles->size() == 0)
-        throw SQLExecError("Table " + string(statement->tableName) + " does not exist");
-    delete handles;
-
-    handles = indices->select(&where);
+    Handles *handles = indices->select(&where);
     for (Handle const &handle : *handles) rows->emplace_back(indices->project(handle));
 
     delete handles;
@@ -204,6 +198,28 @@ QueryResult *SQLExec::drop_index(const DropStatement *statement) {
 
     return new QueryResult("dropped index " + string(statement->indexName) + "\n");
 }
+
+QueryResult *SQLExec::drop_table(const DropStatement *statement) {
+    string tableName = string(statement->name);
+    ValueDict where;
+    where[TABLE_NAME_COLUMN] = Value(tableName);
+
+    HeapTable *table = dynamic_cast<HeapTable *>(&tables->get_table(tableName));
+    // Remove all columns
+    Columns *columns = dynamic_cast<Columns *>(&tables->get_table(Columns::TABLE_NAME));
+    Handles *handles = columns->select(&where);
+    for (Handle const &handle : *handles) columns->del(handle);
+    delete handles;
+    table->drop();
+    // Remove table
+    tables->del(*tables->select(&where)->begin());
+    // Remove all indices
+    handles = indices->select(&where);
+    for (auto const &handle : *handles) indices->del(handle);
+    delete handles;
+
+    return new QueryResult("dropped " + tableName + "\n");
+};
 
 QueryResult *SQLExec::create_table(const CreateStatement *statement) {
     string tableName = string(statement->tableName);
@@ -273,7 +289,7 @@ QueryResult *SQLExec::create_index(const CreateStatement *statement) {
     // check if table exists
     Handles *handles = tables->select(&where);
     if (handles->size() == 0)
-        throw SQLExecError("Table " + string(statement->tableName) + " does not exist");
+        throw SQLExecError("table " + string(statement->tableName) + " does not exist");
     delete handles;
     Columns *columns = dynamic_cast<Columns *>(&tables->get_table(Columns::TABLE_NAME));
     // check if columns exist
@@ -288,24 +304,22 @@ QueryResult *SQLExec::create_index(const CreateStatement *statement) {
     return new QueryResult("created index " + string(statement->indexName) + "\n");
 }
 
-QueryResult *SQLExec::drop_table(const DropStatement *statement) {
-    string tableName = string(statement->name);
+void SQLExec::validate_table(char* tableName, bool must_exists = true) {
     ValueDict where;
     where[TABLE_NAME_COLUMN] = Value(tableName);
+    Handles *handles = tables->select(&where);
+    if (must_exists && !handles->size())
+        throw SQLExecError("table " + string(tableName) + " does not exist");
+    if (!must_exists && handles->size()) throw SQLExecError("table " + string(tableName) + " exists ");
+}
 
-    HeapTable *table = dynamic_cast<HeapTable *>(&tables->get_table(tableName));
-    // Remove all columns
-    Columns *columns = dynamic_cast<Columns *>(&tables->get_table(Columns::TABLE_NAME));
-    Handles *handles = columns->select(&where);
-    for (Handle const &handle : *handles) columns->del(handle);
-    delete handles;
-    table->drop();
-    // Remove table
-    tables->del(*tables->select(&where)->begin());
-    // Remove all indices
-    handles = indices->select(&where);
-    for (auto const &handle : *handles) indices->del(handle);
-    delete handles;
-
-    return new QueryResult("dropped " + tableName + "\n");
-};
+void SQLExec::validate_index(char* indexName, char* tableName, bool must_exists = true) {
+    ValueDict where;
+    where[TABLE_NAME_COLUMN] = Value(tableName);
+    where[INDEX_NAME_COLUMN] = Value(indexName);
+    Handles *handles = indices->select(&where);
+    if (must_exists && !handles->size())
+        throw SQLExecError("Index " + string(indexName) + " does not exist");
+    if (!must_exists && handles->size()) 
+        throw SQLExecError("Index " + string(indexName) + " exists ");
+}

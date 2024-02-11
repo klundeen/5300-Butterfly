@@ -100,4 +100,8 @@ protected:
      */
     static void
     column_definition(const hsql::ColumnDefinition *col, Identifier &column_name, ColumnAttribute &column_attribute);
+
+private:
+    static void validate_table(char* tableName, bool must_exists);
+    static void validate_index(char* indexName, char* tableName, bool must_exists);
 };
