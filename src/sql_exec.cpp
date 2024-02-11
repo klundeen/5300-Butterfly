@@ -120,10 +120,6 @@ QueryResult *SQLExec::show(const ShowStatement *statement) {
     }
 }
 
-string return_msg(int num_rows) {
-    return "successfully returned " + to_string(num_rows) + " rows\n";
-}
-
 QueryResult *SQLExec::show_tables() {
     ColumnAttributes *column_attributes = new ColumnAttributes();
     ColumnNames *column_names = new ColumnNames();
@@ -141,7 +137,8 @@ QueryResult *SQLExec::show_tables() {
 
     delete handles;
 
-    return new QueryResult(column_names, column_attributes, rows, return_msg(rows->size()));
+    return new QueryResult(column_names, column_attributes, rows,
+                           "successfully returned " + to_string(rows->size()) + " rows\n");
 }
 
 QueryResult *SQLExec::show_columns(const ShowStatement *statement) {
@@ -166,7 +163,8 @@ QueryResult *SQLExec::show_columns(const ShowStatement *statement) {
 
     delete handles;
 
-    return new QueryResult(column_names, column_attributes, rows, return_msg(rows->size()));
+    return new QueryResult(column_names, column_attributes, rows,
+                           "successfully returned " + to_string(rows->size()) + " rows\n");
 }
 
 QueryResult *SQLExec::show_index(const ShowStatement *statement) {
@@ -191,7 +189,8 @@ QueryResult *SQLExec::show_index(const ShowStatement *statement) {
 
     delete handles;
 
-    return new QueryResult(column_names, column_attributes, rows, return_msg(rows->size()));
+    return new QueryResult(column_names, column_attributes, rows,
+                           "successfully returned " + to_string(rows->size()) + " rows\n");
 }
 
 QueryResult *SQLExec::drop_index(const DropStatement *statement) {
