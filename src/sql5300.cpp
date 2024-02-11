@@ -45,7 +45,10 @@ int main(int argc, char *argv[]) {
         if (query == "quit")
             break;  // only way to get out
         if (query == "test") {
-            cout << "test_heap_storage: " << (test_heap_storage() ? "ok" : "failed") << endl;
+            cout << "Test Parse Tree To String: " << endl;
+            testParseTreeToString();
+            cout << "Test Heap Storage: " << endl;
+            cout << (test_heap_storage() ? "OK" : "FAILED") << endl;
             continue;
         }
 
