@@ -1,13 +1,12 @@
 /**
- * @file heap_table.h - Implementation of storage_engine with a heap file structure.
+ * @file HeapTable.h - Implementation of storage_engine with a heap file structure.
  * HeapTable: DbRelation
  *
- * @author Kevin Lundeen, Dominic Burgi
+ * @author Kevin Lundeen
  * @see "Seattle University, CPSC5300, Winter Quarter 2024"
  */
 #pragma once
 
-#include "db_cxx.h"
 #include "storage_engine.h"
 #include "slotted_page.h"
 #include "heap_file.h"
@@ -54,16 +53,18 @@ public:
 
     virtual ValueDict *project(Handle handle, const ColumnNames *column_names);
 
+    using DbRelation::project;
+
 protected:
     HeapFile file;
 
-    virtual ValueDict *validate(const ValueDict *row);
+    virtual ValueDict *validate(const ValueDict *row) const;
 
     virtual Handle append(const ValueDict *row);
 
-    virtual Dbt *marshal(const ValueDict *row);
+    virtual Dbt *marshal(const ValueDict *row) const;
 
-    virtual ValueDict *unmarshal(Dbt *data);
+    virtual ValueDict *unmarshal(Dbt *data) const;
 
-    bool satisfies_where(const ValueDict& record, const ValueDict& where);
+    virtual bool selected(Handle handle, const ValueDict *where);
 };
