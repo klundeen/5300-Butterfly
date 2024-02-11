@@ -171,16 +171,18 @@ QueryResult *SQLExec::drop(const DropStatement *statement) {
         where[TABLE_NAME_COLUMN] = Value(tableName);
 
         HeapTable *table = static_cast<HeapTable *>(&tables->get_table(tableName));
-
+        // Remove all columns
         Columns *columns = static_cast<Columns *>(&tables->get_table(Columns::TABLE_NAME));
         Handles *handles = columns->select(&where);
         for (Handle const &handle : *handles) columns->del(handle);
-
         delete handles;
-
         table->drop();
-
+        // Remove table
         tables->del(*tables->select(&where)->begin());
+        // Remove all indices
+        handles = indices->select(&where);
+        for (auto const &handle : *handles) indices->del(handle);
+        delete handles;
 
         return new QueryResult("dropped " + tableName + "\n");
     };
