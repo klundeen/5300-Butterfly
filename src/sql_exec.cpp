@@ -91,7 +91,7 @@ QueryResult *SQLExec::create(const CreateStatement *statement) {
             validate_table(statement->tableName, false);
             return create_table(statement);
         case CreateStatement::kIndex:
-            validate_table(statement->tableName);
+            validate_table(statement->tableName, true);
             return create_index(statement);
         default:
             throw SQLExecError("Not supported CREATE type");
@@ -101,11 +101,11 @@ QueryResult *SQLExec::create(const CreateStatement *statement) {
 QueryResult *SQLExec::drop(const DropStatement *statement) {
     switch (statement->type) {
         case DropStatement::kTable:
-            validate_table(statement->name);
+            validate_table(statement->name, true);
             return drop_table(statement);
         case DropStatement::kIndex:
-            validate_table(statement->name);
-            validate_index(statement->indexName, statement->name);
+            validate_table(statement->name, true);
+            validate_index(statement->indexName, statement->name, true);
             return drop_index(statement);
         default:
             throw SQLExecError("Not supported DROP type");
@@ -117,10 +117,10 @@ QueryResult *SQLExec::show(const ShowStatement *statement) {
         case ShowStatement::kTables:
             return show_tables();
         case ShowStatement::kColumns:
-            validate_table(statement->tableName);
+            validate_table(statement->tableName, true);
             return show_columns(statement);
         case ShowStatement::kIndex:
-            validate_table(statement->tableName);
+            validate_table(statement->tableName, true);
             return show_index(statement);
         default:
             throw SQLExecError("Unknown type in SHOW statement");
