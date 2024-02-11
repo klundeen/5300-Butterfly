@@ -86,89 +86,6 @@ void SQLExec::column_definition(const ColumnDefinition *col, Identifier &column_
 }
 
 QueryResult *SQLExec::create(const CreateStatement *statement) {
-    auto create_table = [&](const CreateStatement *statement) {
-        string tableName = string(statement->tableName);
-
-        vector<ValueDict> rows;
-        for (auto const &column : *statement->columns) {
-            string type;
-            if (column->type == ColumnDefinition::DataType::INT)
-                type = "INT";
-            else if (column->type == ColumnDefinition::DataType::TEXT) {
-                type = "TEXT";
-            } else {
-                return new QueryResult("Not supported column type");
-            }
-
-            ValueDict col_row;
-            col_row[TABLE_NAME_COLUMN] = Value(tableName);
-            col_row[COLUMN_NAME_COLUMN] = Value(column->name);
-            col_row[DATA_TYPE_COLUMN] = Value(type);
-            rows.push_back(col_row);
-        }
-
-        ValueDict table_row;
-        table_row[TABLE_NAME_COLUMN] = Value(tableName);
-
-        Columns *columns = dynamic_cast<Columns *>(&tables->get_table(Columns::TABLE_NAME));
-
-        tables->insert(&table_row);
-        try {
-            for (auto &row : rows) columns->insert(&row);
-        } catch (DbRelationError &e) {
-            Handles *handles = columns->select(&table_row);
-            for (Handle const &handle : *handles) columns->del(handle);
-            tables->del(*tables->select(&table_row)->begin());
-            throw e;
-        }
-
-        HeapTable *table = dynamic_cast<HeapTable *>(&tables->get_table(tableName));
-        table->create();
-
-        return new QueryResult("created " + string(statement->tableName) + "\n");
-    };
-
-    auto create_index = [&](const CreateStatement *statement) {
-        if (statement->indexType && string(statement->indexType) != "BTREE" &&
-            string(statement->indexType) != "HASH")
-            throw SQLExecError("Unsupported index type " + string(statement->indexType));
-
-        string indexType = statement->indexType ? string(statement->indexType) : "BTREE";
-
-        int seq = 1;
-        bool isUnique = true;
-        vector<ValueDict> rows;
-        for (char *const columnName : *statement->indexColumns) {
-            ValueDict col_row;
-            col_row[TABLE_NAME_COLUMN] = Value(statement->tableName);
-            col_row[INDEX_NAME_COLUMN] = Value(statement->indexName);
-            col_row[COLUMN_NAME_COLUMN] = Value(columnName);
-            col_row[SEQ_IN_INDEX_COLUMN] = Value(seq++);
-            col_row[INDEX_TYPE_COLUMN] = Value(indexType);
-            col_row[IS_UNIQUE_COLUMN] = Value(isUnique);
-            rows.push_back(col_row);
-        }
-
-        ValueDict where;
-        where[TABLE_NAME_COLUMN] = Value(statement->tableName);
-        // check if table exists
-        Handles *handles = tables->select(&where);
-        if (handles->size() == 0)
-            throw SQLExecError("Table " + string(statement->tableName) + " does not exist");
-        delete handles;
-        Columns * columns = dynamic_cast<Columns *>(&tables->get_table(Columns::TABLE_NAME));
-        // check if columns exist
-        for (auto &row : rows) {
-            where[COLUMN_NAME_COLUMN] = row[COLUMN_NAME_COLUMN];
-            if (columns->select(&where)->size() == 0)
-                throw SQLExecError("Column " + row[COLUMN_NAME_COLUMN].s + " does not exist");
-        }
-
-        for (auto &row : rows) indices->insert(&row);
-
-        return new QueryResult("created index " + string(statement->indexName) + "\n");
-    };
-
     switch (statement->type) {
         case CreateStatement::kTable:
             return create_table(statement);
@@ -180,28 +97,6 @@ QueryResult *SQLExec::create(const CreateStatement *statement) {
 }
 
 QueryResult *SQLExec::drop(const DropStatement *statement) {
-    auto drop_table = [&](const DropStatement *statement) {
-        string tableName = string(statement->name);
-        ValueDict where;
-        where[TABLE_NAME_COLUMN] = Value(tableName);
-
-        HeapTable *table = dynamic_cast<HeapTable *>(&tables->get_table(tableName));
-        // Remove all columns
-        Columns *columns = dynamic_cast<Columns *>(&tables->get_table(Columns::TABLE_NAME));
-        Handles *handles = columns->select(&where);
-        for (Handle const &handle : *handles) columns->del(handle);
-        delete handles;
-        table->drop();
-        // Remove table
-        tables->del(*tables->select(&where)->begin());
-        // Remove all indices
-        handles = indices->select(&where);
-        for (auto const &handle : *handles) indices->del(handle);
-        delete handles;
-
-        return new QueryResult("dropped " + tableName + "\n");
-    };
-
     switch (statement->type) {
         case DropStatement::kTable:
             return drop_table(statement);
@@ -310,3 +205,108 @@ QueryResult *SQLExec::drop_index(const DropStatement *statement) {
 
     return new QueryResult("dropped index " + string(statement->indexName) + "\n");
 }
+
+QueryResult *SQLExec::create_table(const CreateStatement *statement) {
+    string tableName = string(statement->tableName);
+
+    vector<ValueDict> rows;
+    for (auto const &column : *statement->columns) {
+        string type;
+        if (column->type == ColumnDefinition::DataType::INT)
+            type = "INT";
+        else if (column->type == ColumnDefinition::DataType::TEXT) {
+            type = "TEXT";
+        } else {
+            return new QueryResult("Not supported column type");
+        }
+
+        ValueDict col_row;
+        col_row[TABLE_NAME_COLUMN] = Value(tableName);
+        col_row[COLUMN_NAME_COLUMN] = Value(column->name);
+        col_row[DATA_TYPE_COLUMN] = Value(type);
+        rows.push_back(col_row);
+    }
+
+    ValueDict table_row;
+    table_row[TABLE_NAME_COLUMN] = Value(tableName);
+
+    Columns *columns = dynamic_cast<Columns *>(&tables->get_table(Columns::TABLE_NAME));
+
+    tables->insert(&table_row);
+    try {
+        for (auto &row : rows) columns->insert(&row);
+    } catch (DbRelationError &e) {
+        Handles *handles = columns->select(&table_row);
+        for (Handle const &handle : *handles) columns->del(handle);
+        tables->del(*tables->select(&table_row)->begin());
+        throw e;
+    }
+
+    HeapTable *table = dynamic_cast<HeapTable *>(&tables->get_table(tableName));
+    table->create();
+
+    return new QueryResult("created " + string(statement->tableName) + "\n");
+}
+
+QueryResult *SQLExec::create_index(const CreateStatement *statement) {
+    if (statement->indexType && string(statement->indexType) != "BTREE" &&
+        string(statement->indexType) != "HASH")
+        throw SQLExecError("Unsupported index type " + string(statement->indexType));
+
+    string indexType = statement->indexType ? string(statement->indexType) : "BTREE";
+
+    int seq = 1;
+    bool isUnique = true;
+    vector<ValueDict> rows;
+    for (char *const columnName : *statement->indexColumns) {
+        ValueDict col_row;
+        col_row[TABLE_NAME_COLUMN] = Value(statement->tableName);
+        col_row[INDEX_NAME_COLUMN] = Value(statement->indexName);
+        col_row[COLUMN_NAME_COLUMN] = Value(columnName);
+        col_row[SEQ_IN_INDEX_COLUMN] = Value(seq++);
+        col_row[INDEX_TYPE_COLUMN] = Value(indexType);
+        col_row[IS_UNIQUE_COLUMN] = Value(isUnique);
+        rows.push_back(col_row);
+    }
+
+    ValueDict where;
+    where[TABLE_NAME_COLUMN] = Value(statement->tableName);
+    // check if table exists
+    Handles *handles = tables->select(&where);
+    if (handles->size() == 0)
+        throw SQLExecError("Table " + string(statement->tableName) + " does not exist");
+    delete handles;
+    Columns *columns = dynamic_cast<Columns *>(&tables->get_table(Columns::TABLE_NAME));
+    // check if columns exist
+    for (auto &row : rows) {
+        where[COLUMN_NAME_COLUMN] = row[COLUMN_NAME_COLUMN];
+        if (columns->select(&where)->size() == 0)
+            throw SQLExecError("Column " + row[COLUMN_NAME_COLUMN].s + " does not exist");
+    }
+
+    for (auto &row : rows) indices->insert(&row);
+
+    return new QueryResult("created index " + string(statement->indexName) + "\n");
+}
+
+QueryResult *SQLExec::drop_table(const DropStatement *statement) {
+    string tableName = string(statement->name);
+    ValueDict where;
+    where[TABLE_NAME_COLUMN] = Value(tableName);
+
+    HeapTable *table = dynamic_cast<HeapTable *>(&tables->get_table(tableName));
+    // Remove all columns
+    Columns *columns = dynamic_cast<Columns *>(&tables->get_table(Columns::TABLE_NAME));
+    Handles *handles = columns->select(&where);
+    for (Handle const &handle : *handles) columns->del(handle);
+    delete handles;
+    table->drop();
+    // Remove table
+    tables->del(*tables->select(&where)->begin());
+    // Remove all indices
+    handles = indices->select(&where);
+    for (auto const &handle : *handles) indices->del(handle);
+    delete handles;
+
+    return new QueryResult("dropped " + tableName + "\n");
+};
