@@ -39,7 +39,7 @@ int main(int argc, char *argv[]) {
         string query;
         cout << "\033[1;34m";
         getline(cin, query);
-        cout << "\033[0m\n";
+        cout << "\033[0m";
         if (query.length() == 0)
             continue;  // blank line -- just skip
         if (query == "quit")

@@ -285,19 +285,16 @@ QueryResult *SQLExec::create_index(const CreateStatement *statement) {
         col_row[IS_UNIQUE_COLUMN] = Value(isUnique);
         rows.push_back(col_row);
     }
-
-    ValueDict where;
-    where[TABLE_NAME_COLUMN] = Value(statement->tableName);
-    // check if table exists
-    Handles *handles = tables->select(&where);
-    if (handles->size() == 0)
-        throw SQLExecError("table " + string(statement->tableName) + " does not exist");
-    delete handles;
+ 
     Columns *columns = dynamic_cast<Columns *>(&tables->get_table(Columns::TABLE_NAME));
     // check if columns exist
     for (auto &row : rows) {
+        ValueDict where;
         where[COLUMN_NAME_COLUMN] = row[COLUMN_NAME_COLUMN];
-        if (columns->select(&where)->size() == 0)
+        Handles * handles = columns->select(&where);
+        int size = handles->size();
+        delete handles;
+        if (size == 0)
             throw SQLExecError("Column " + row[COLUMN_NAME_COLUMN].s + " does not exist");
     }
 
