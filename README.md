@@ -31,3 +31,7 @@ To clean the build and remove binary objects, call make clean:
 To enable debug print statments in any cpp file, uncomment the DEBUG_ENABLED definition:
 
 `#define DEBUG_ENABLED`
+
+## Handoff
+Milestone 4: [Video Link](https://redhawks-my.sharepoint.com/:v:/g/personal/dvo4_seattleu_edu/Ebs7OQ04tQBHg-ZJ5fIFTE8Ba4DdSCI_CSL0v78PF6ca3g?e=X356EA&nav=eyJyZWZlcnJhbEluZm8iOnsicmVmZXJyYWxBcHAiOiJTdHJlYW1XZWJBcHAiLCJyZWZlcnJhbFZpZXciOiJTaGFyZURpYWxvZy1MaW5rIiwicmVmZXJyYWxBcHBQbGF0Zm9ybSI6IldlYiIsInJlZmVycmFsTW9kZSI6InZpZXcifX0%3D)
+note: login with your SU account to view the video
