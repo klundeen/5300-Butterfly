@@ -10,7 +10,7 @@ INC_DIR	 	= ./inc
 SRC_DIR	 	= ./src
 
 # Add suffixes to filenames to create the different lists of file types
-FILES = slotted_page heap_file heap_table sql_exec schema_tables heap_storage storage_engine ParseTreeToString
+FILES = slotted_page heap_file heap_table sql_exec schema_tables heap_storage storage_engine ParseTreeToString EvalPlan
 HDRS 			= $(addsuffix .h, $(FILES))
 OBJS 			= $(addsuffix .o, $(FILES)) sql5300.o
 # Add paths to files to create the full paths`

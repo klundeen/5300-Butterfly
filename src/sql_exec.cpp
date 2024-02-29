@@ -72,6 +72,12 @@ QueryResult *SQLExec::execute(const SQLStatement *statement) {
                 return drop((const DropStatement *)statement);
             case kStmtShow:
                 return show((const ShowStatement *)statement);
+            case kStmtInsert:
+                return insert((const InsertStatement *) statement);
+            case kStmtDelete:
+                return del((const DeleteStatement *) statement);
+            case kStmtSelect:
+                return select((const SelectStatement *) statement);
             default:
                 return new QueryResult("not implemented");
         }
@@ -80,9 +86,31 @@ QueryResult *SQLExec::execute(const SQLStatement *statement) {
     }
 }
 
-void SQLExec::column_definition(const ColumnDefinition *col, Identifier &column_name,
-                                ColumnAttribute &column_attribute) {
-    throw SQLExecError("not implemented");  // FIXME
+QueryResult *SQLExec::insert(const InsertStatement *statement) {
+    return new QueryResult("INSERT statement not yet implemented");  // FIXME
+}
+
+QueryResult *SQLExec::del(const DeleteStatement *statement) {
+    return new QueryResult("DELETE statement not yet implemented");  // FIXME
+}
+
+QueryResult *SQLExec::select(const SelectStatement *statement) {
+    return new QueryResult("SELECT statement not yet implemented");  // FIXME
+}
+
+void SQLExec::column_definition(const ColumnDefinition *col, Identifier &column_name, ColumnAttribute &column_attribute) {
+    column_name = col->name;
+    switch (col->type) {
+        case ColumnDefinition::INT:
+            column_attribute.set_data_type(ColumnAttribute::INT);
+            break;
+        case ColumnDefinition::TEXT:
+            column_attribute.set_data_type(ColumnAttribute::TEXT);
+            break;
+        case ColumnDefinition::DOUBLE:
+        default:
+            throw SQLExecError("unrecognized data type");
+    }
 }
 
 QueryResult *SQLExec::create(const CreateStatement *statement) {
