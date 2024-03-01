@@ -10,7 +10,7 @@ INC_DIR	 	= ./inc
 SRC_DIR	 	= ./src
 
 # Add suffixes to filenames to create the different lists of file types
-FILES = slotted_page heap_file heap_table sql_exec schema_tables heap_storage storage_engine ParseTreeToString EvalPlan
+FILES = slotted_page heap_file heap_table sql_exec schema_tables heap_storage storage_engine ParseTreeToString EvalPlan btree BTreeNode
 HDRS 			= $(addsuffix .h, $(FILES))
 OBJS 			= $(addsuffix .o, $(FILES)) sql5300.o
 # Add paths to files to create the full paths`
@@ -31,6 +31,7 @@ heap_table.o : $(HDRS_PATH)
 schema_tables.o : $(HDRS_PATH)
 sql5300.o : $(HDRS_PATH)
 storage_engine.o : $(HDRS_PATH)
+
 
 # General rule for compilation
 %.o: $(SRC_DIR)/%.cpp

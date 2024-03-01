@@ -1,7 +1,7 @@
 /**
  * @file EvalPlan.cpp - implementation of evaluation plan classes
  * @author Kevin Lundeen
- * @see "Seattle University, CPSC5300, Spring 2022"
+ * @see "Seattle University, CPSC5300, Winter Quarter 2024"
  */
 
 #include "EvalPlan.h"

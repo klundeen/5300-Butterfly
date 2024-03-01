@@ -10,6 +10,7 @@
 #include "SQLParser.h"
 #include "ParseTreeToString.h"
 #include "sql_exec.h"
+#include "btree.h"
 
 using namespace std;
 using namespace hsql;
@@ -49,6 +50,8 @@ int main(int argc, char *argv[]) {
             testParseTreeToString();
             cout << "Test Heap Storage: " << endl;
             cout << (test_heap_storage() ? "OK" : "FAILED") << endl;
+            cout << "Test Btree: " <<endl;
+            cout << (test_btree() ? "ok" : "failed") << endl;
             continue;
         }
 

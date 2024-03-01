@@ -2,7 +2,7 @@
  * @file EvalPlan.h - Evaluation plans
  *
  * @author Kevin Lundeen
- * @see "Seattle University, CPSC5300, Spring 2022"
+ * @see "Seattle University, CPSC5300, Winter Quarter 2024"
  */
 #pragma once
 
