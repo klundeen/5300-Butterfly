@@ -110,37 +110,35 @@ QueryResult *SQLExec::insert(const InsertStatement *statement) {
         }
     }
 
-    ValueDict row; // row to be added
-
-    for (unsigned int i = 0; i < column_names.size(); ++i) {
-        Expr *value_expr = (*statement->values)[i];
-
-        switch (value_expr->type) {
-            case kExprLiteralInt:
-                row[column_names[i]] = Value(value_expr->ival);
-                break;
-            case kExprLiteralString:
-                row[column_names[i]] = Value(value_expr->name);
-                break;
-            default:
-                throw SQLExecError("Not supported data type");
-        }
+    if(column_names.size() != statement->values->size()) {
+        throw SQLExecError(string("DbRelationError: Unmatching columns and values."));
     }
 
-    Handle handle = table.insert(&row);
-
-    // Add to indices
     IndexNames index_names = indices->get_index_names(table_name);
-
+    ValueDict row; // row to be added
     try {
+        for (unsigned int i = 0; i < column_names.size(); ++i) {
+            Expr *value_expr = (*statement->values)[i];
+            switch (value_expr->type) {
+                case kExprLiteralInt:
+                    row[column_names[i]] = Value(value_expr->ival);
+                    break;
+                case kExprLiteralString:
+                    row[column_names[i]] = Value(value_expr->name);
+                    break;
+                default:
+                    throw SQLExecError("Not supported data type");
+            }
+        }
+
+        Handle handle = table.insert(&row);
+
         for (const auto &index_name : index_names) {
             DbIndex &index = indices->get_index(table_name, index_name);
             index.insert(handle);
         }
     } catch (exception &e) {
-        // del in indices 
-        table.del(handle);
-        throw;
+        throw SQLExecError(string("Insertion failed: ") + e.what());
     }
 
     string message = "successfully inserted 1 row into " + table_name;
