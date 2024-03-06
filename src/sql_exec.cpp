@@ -95,7 +95,30 @@ QueryResult *SQLExec::del(const DeleteStatement *statement) {
 }
 
 QueryResult *SQLExec::select(const SelectStatement *statement) {
-    return new QueryResult("SELECT statement not yet implemented");  // FIXME
+    string table_name = statement->fromTable->name;
+    DbRelation &table = tables->get_table(table_name); // prefer polymorphism
+
+    ColumnAttributes *column_attributes = new ColumnAttributes(table.get_column_attributes()); // copy
+    ColumnNames *column_names = new ColumnNames(table.get_column_names());
+    
+    EvalPlan *plan = new EvalPlan(table);
+    if (statement->whereClause) {
+        ValueDict *where = get_where_conjunction(statement->whereClause, table.get_column_names());
+        plan = new EvalPlan(where, plan);
+    }
+
+    if (statement->selectList && statement->selectList->size()) {
+
+        ColumnNames *projection = get_select_projection(statement->selectList, table.get_column_names());
+        plan = new EvalPlan(projection, plan);
+        column_names = projection;
+    }
+
+    EvalPlan *optimized = plan->optimize();
+    ValueDicts *rows = optimized->evaluate();
+
+    return new QueryResult(column_names, column_attributes, rows,
+                           "successfully returned " + to_string(rows->size()) + " rows\n");
 }
 
 void SQLExec::column_definition(const ColumnDefinition *col, Identifier &column_name, ColumnAttribute &column_attribute) {
@@ -353,4 +376,39 @@ void SQLExec::validate_index(char* indexName, char* tableName, bool must_exists 
         throw SQLExecError("Index " + string(indexName) + " does not exist");
     if (!must_exists && size) 
         throw SQLExecError("Index " + string(indexName) + " exists ");
+}
+
+// FIXME: does not cover the case where you use a diff binary operation
+void parse_where_clause(const hsql::Expr *node, ValueDict &c) {
+    if (node->opType == Expr::OperatorType::AND) {
+        c[std::string(node->expr->expr->name)] = Value(node->expr->expr->ival);
+        c[std::string(node->expr2->expr->name)] = Value(node->expr2->expr2->ival);
+    } else {
+        printf("%d\n", node->opType);
+        c[std::string(node->expr->name)] = Value(node->expr->ival);
+    }
+}
+
+ValueDict *SQLExec::get_where_conjunction(const hsql::Expr *where_clause, const ColumnNames &column_names) {
+
+    ValueDict *conjunction = new ValueDict();
+    parse_where_clause(where_clause, *conjunction);
+    for (auto item: *conjunction) {
+        if (find(column_names.begin(), column_names.end(), item.first) == column_names.end()) {
+            throw SQLExecError("Could not find column " + item.first);
+        }
+    }
+    return conjunction;
+}
+
+ColumnNames *SQLExec::get_select_projection(const std::vector<hsql::Expr*>* list, const ColumnNames &column_names) {
+    ColumnNames *projection = new ColumnNames();
+    for (auto item : *list) {
+        if (!item->name) continue;
+        if (find(column_names.begin(), column_names.end(), string(item->name)) == column_names.end()) {
+            throw SQLExecError("Could not find column " + string(item->name));
+        }
+        projection->push_back(string(item->name));
+    }
+    return projection;
 }

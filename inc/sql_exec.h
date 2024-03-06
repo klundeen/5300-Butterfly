@@ -11,6 +11,7 @@
 #include <string>
 #include "SQLParser.h"
 #include "schema_tables.h"
+#include "EvalPlan.h"
 
 /**
  * @class SQLExecError - exception for SQLExec methods
@@ -110,4 +111,6 @@ protected:
 private:
     static void validate_table(char* tableName, bool must_exists);
     static void validate_index(char* indexName, char* tableName, bool must_exists);
+    static ValueDict *get_where_conjunction(const hsql::Expr *where_clause, const ColumnNames &column_names);
+    static ColumnNames *get_select_projection(const std::vector<hsql::Expr*>* list, const ColumnNames &column_names);
 };
