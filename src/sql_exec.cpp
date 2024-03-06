@@ -4,6 +4,7 @@
  * @see "Seattle University, CPSC5300, Winter Quarter 2024"
  */
 #include "sql_exec.h"
+#include "EvalPlan.h"
 
 using namespace std;
 using namespace hsql;
@@ -87,7 +88,67 @@ QueryResult *SQLExec::execute(const SQLStatement *statement) {
 }
 
 QueryResult *SQLExec::insert(const InsertStatement *statement) {
-    return new QueryResult("INSERT statement not yet implemented");  // FIXME
+    validate_table(statement->tableName, true);
+
+    Identifier table_name = statement->tableName;
+    // get the table from _tables
+    DbRelation& table = tables->get_table(table_name);
+    ColumnAttributes column_attributes;
+    ColumnNames column_names;
+    unsigned int index = 0;
+
+    // if column names specified in the statement: INSERT INTO table_name (column1, column2, column3, ...) VALUES
+    // add to column names, otherwise add all column names
+    if(statement->columns != nullptr){
+        for (auto const col : *statement->columns){
+            column_names.push_back(col);
+        }
+    }
+    else {
+        for (auto const col: table.get_column_names()){
+            column_names.push_back(col);
+        }
+    }
+
+    ValueDict row; // row to be added
+
+    for (unsigned int i = 0; i < column_names.size(); ++i) {
+        Expr *value_expr = (*statement->values)[i];
+
+        switch (value_expr->type) {
+            case kExprLiteralInt:
+                row[column_names[i]] = Value(value_expr->ival);
+                break;
+            case kExprLiteralString:
+                row[column_names[i]] = Value(value_expr->name);
+                break;
+            default:
+                throw SQLExecError("Not supported data type");
+        }
+    }
+
+    Handle handle = table.insert(&row);
+
+    // Add to indices
+    IndexNames index_names = indices->get_index_names(table_name);
+
+    try {
+        for (const auto &index_name : index_names) {
+            DbIndex &index = indices->get_index(table_name, index_name);
+            index.insert(handle);
+        }
+    } catch (exception &e) {
+        // del in indices 
+        table.del(handle);
+        throw;
+    }
+
+    string message = "successfully inserted 1 row into " + table_name;
+    if (index_names.size() > 0)
+        message += " and " + to_string(index_names.size()) + " indices";
+
+    // del handle;
+    return new QueryResult(message); 
 }
 
 QueryResult *SQLExec::del(const DeleteStatement *statement) {
