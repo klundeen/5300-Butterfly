@@ -103,7 +103,7 @@ QueryResult *SQLExec::select(const SelectStatement *statement) {
     
     EvalPlan *plan = new EvalPlan(table);
     if (statement->whereClause) {
-        ValueDict *where = get_where_conjunction(statement->whereClause, table.get_column_names());
+        ValueDict *where = get_where_conjunction(statement->whereClause, table.get_column_names(), table.get_column_attributes());
         plan = new EvalPlan(where, plan);
     }
 
@@ -117,8 +117,8 @@ QueryResult *SQLExec::select(const SelectStatement *statement) {
     EvalPlan *optimized = plan->optimize();
     ValueDicts *rows = optimized->evaluate();
 
-    return new QueryResult(column_names, column_attributes, rows,
-                           "successfully returned " + to_string(rows->size()) + " rows\n");
+    // return new QueryResult(column_names, column_attributes, rows, "successfully returned " + to_string(rows->size()) + " rows\n");
+    return new QueryResult("select statement not yet implemented");  // FIXME
 }
 
 void SQLExec::column_definition(const ColumnDefinition *col, Identifier &column_name, ColumnAttribute &column_attribute) {
@@ -381,16 +381,19 @@ void SQLExec::validate_index(char* indexName, char* tableName, bool must_exists 
 // FIXME: does not cover the case where you use a diff binary operation
 void parse_where_clause(const hsql::Expr *node, ValueDict &c) {
     if (node->opType == Expr::OperatorType::AND) {
-        c[std::string(node->expr->expr->name)] = Value(node->expr->expr->ival);
-        c[std::string(node->expr2->expr->name)] = Value(node->expr2->expr2->ival);
+        Identifier left_col_ref = node->expr->expr->name;
+        Identifier right_col_ref = node->expr2->expr->name;
+        Expr *left_val = node->expr->expr2;
+        Expr *right_val = node->expr2->expr2;
+
+        c[std::string(left_col_ref)] = left_val->type == kExprLiteralInt ? Value(left_val->ival) : Value(left_val->name);
+        c[std::string(right_col_ref)] = right_val->type == kExprLiteralInt ? Value(right_val->ival) :  Value(right_val->name);
     } else {
-        printf("%d\n", node->opType);
-        c[std::string(node->expr->name)] = Value(node->expr->ival);
+        c[std::string(node->expr->name)] = node->expr2->type == kExprLiteralInt ? Value(node->expr2->ival) : Value(node->expr2->name);
     }
 }
 
-ValueDict *SQLExec::get_where_conjunction(const hsql::Expr *where_clause, const ColumnNames &column_names) {
-
+ValueDict *SQLExec::get_where_conjunction(const hsql::Expr *where_clause, const ColumnNames &column_names, const ColumnAttributes &column_attribs) {
     ValueDict *conjunction = new ValueDict();
     parse_where_clause(where_clause, *conjunction);
     for (auto item: *conjunction) {
