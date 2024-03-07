@@ -154,7 +154,36 @@ QueryResult *SQLExec::del(const DeleteStatement *statement) {
 }
 
 QueryResult *SQLExec::select(const SelectStatement *statement) {
-    return new QueryResult("SELECT statement not yet implemented");  // FIXME
+    string table_name = statement->fromTable->name;
+    DbRelation &table = tables->get_table(table_name); // prefer polymorphism
+
+    ColumnNames *column_names = new ColumnNames();
+    ColumnAttributes *column_attributes = new ColumnAttributes();
+
+    EvalPlan *plan = new EvalPlan(table);
+    if (statement->whereClause) {
+        ValueDict *where = get_where_conjunction(statement->whereClause, table.get_column_names(), table.get_column_attributes());
+        plan = new EvalPlan(where, plan);
+    }
+
+    if (statement->selectList && statement->selectList->size()) {
+
+        ColumnNames *projection = get_select_projection(statement->selectList, table.get_column_names());
+        plan = new EvalPlan(projection, plan);
+    }
+
+    EvalPlan *optimized = plan->optimize();
+    ValueDicts *rows = optimized->evaluate();
+
+    if (rows->size()) {
+        ValueDict *row = (*rows)[0]; // use one row to get column info
+        for (auto item : *row) {
+            column_names->push_back(item.first);
+            column_attributes->push_back(item.second.data_type);
+        }
+    }
+
+    return new QueryResult(column_names, column_attributes, rows, "successfully returned " + to_string(rows->size()) + " rows\n");
 }
 
 void SQLExec::column_definition(const ColumnDefinition *col, Identifier &column_name, ColumnAttribute &column_attribute) {
@@ -412,4 +441,47 @@ void SQLExec::validate_index(char* indexName, char* tableName, bool must_exists 
         throw SQLExecError("Index " + string(indexName) + " does not exist");
     if (!must_exists && size) 
         throw SQLExecError("Index " + string(indexName) + " exists ");
+}
+
+// FIXME: does not cover the case where you use a diff binary operation
+void parse_where_clause(const hsql::Expr *node, ValueDict &c) {
+    if (node->opType == Expr::OperatorType::AND) {
+        Identifier left_col_ref = node->expr->expr->name;
+        Identifier right_col_ref = node->expr2->expr->name;
+        Expr *left_val = node->expr->expr2;
+        Expr *right_val = node->expr2->expr2;
+
+        c[std::string(left_col_ref)] = left_val->type == kExprLiteralInt ? Value(left_val->ival) : Value(left_val->name);
+        c[std::string(right_col_ref)] = right_val->type == kExprLiteralInt ? Value(right_val->ival) :  Value(right_val->name);
+    } else {
+        c[std::string(node->expr->name)] = node->expr2->type == kExprLiteralInt ? Value(node->expr2->ival) : Value(node->expr2->name);
+    }
+}
+
+ValueDict *SQLExec::get_where_conjunction(const hsql::Expr *where_clause, const ColumnNames &column_names, const ColumnAttributes &column_attribs) {
+    ValueDict *conjunction = new ValueDict();
+    parse_where_clause(where_clause, *conjunction);
+    int i = 0;
+    for (auto item: *conjunction) {
+        if (find(column_names.begin(), column_names.end(), item.first) == column_names.end()) {
+            throw SQLExecError("Could not find column " + item.first);
+        }
+        if (column_attribs[i].get_data_type() != item.second.data_type) {
+            throw SQLExecError("Column data type does not match " + item.first + " datatype does not match");
+        }
+        i++;
+    }
+    return conjunction;
+}
+
+ColumnNames *SQLExec::get_select_projection(const std::vector<hsql::Expr*>* list, const ColumnNames &column_names) {
+    ColumnNames *projection = new ColumnNames();
+    for (auto item : *list) {
+        if (!item->name) continue;
+        if (find(column_names.begin(), column_names.end(), string(item->name)) == column_names.end()) {
+            throw SQLExecError("Could not find column " + string(item->name));
+        }
+        projection->push_back(string(item->name));
+    }
+    return projection;
 }

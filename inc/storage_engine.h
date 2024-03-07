@@ -220,7 +220,7 @@ public:
 
     virtual ~ColumnAttribute() {}
 
-    virtual DataType get_data_type() { return data_type; }
+    virtual DataType get_data_type() const { return data_type; }
 
     virtual void set_data_type(DataType data_type) { this->data_type = data_type; }
 
