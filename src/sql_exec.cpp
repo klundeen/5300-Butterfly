@@ -149,8 +149,64 @@ QueryResult *SQLExec::insert(const InsertStatement *statement) {
     return new QueryResult(message); 
 }
 
-QueryResult *SQLExec::del(const DeleteStatement *statement) {
-    return new QueryResult("DELETE statement not yet implemented");  // FIXME
+ValueDict *SQLExec::get_where_conjunction(const Expr* node, ValueDict* conjunction = nullptr) {
+    if (conjunction == nullptr)
+    {
+        conjunction = new ValueDict();
+    }
+
+    if (node->opType == Expr::OperatorType::AND) 
+    {
+        get_where_conjunction(node->expr, conjunction);
+        get_where_conjunction(node->expr2, conjunction);
+
+    } else if (node->opType == Expr::OperatorType::SIMPLE_OP && node->opChar == '=') 
+    {
+        if (node->expr2->type == kExprLiteralInt) 
+        {
+            (*conjunction)[node->expr->name] = Value(node->expr2->ival);
+        } 
+        else if (node->expr2->type == kExprLiteralString) 
+        {
+            (*conjunction)[node->expr->name] = Value(node->expr2->name);
+        }
+    }
+    return conjunction;
+}
+
+QueryResult* SQLExec::del(const DeleteStatement* statement) {
+    Identifier table_name = statement->tableName;
+    DbRelation &table = tables->get_table(table_name); 
+    
+    EvalPlan* plan = new EvalPlan(table);
+    if (statement->expr)
+    {
+        ValueDict* where = get_where_conjunction(statement->expr);
+        plan = new EvalPlan(where, plan);
+    }
+
+    EvalPlan *optimized = plan->optimize();
+    Handles* handles = optimized->pipeline().second;
+
+    IndexNames indices = SQLExec::indices->get_index_names(statement->tableName);
+    for (auto const &handle : *handles) 
+    {
+        for (auto const &index : indices)
+        {
+            SQLExec::indices->get_index(statement->tableName, index).del(handle);
+        }
+        table.del(handle);
+    }
+
+    string output =  "successfully deleted " + to_string(handles->size()) + " rows";
+    if (indices.size() != 0) 
+    {
+        output += " from " + table_name + " and " + to_string(indices.size()) + " indices";
+    } 
+    delete plan;
+    delete handles;
+    delete optimized;
+    return new QueryResult(output);
 }
 
 QueryResult *SQLExec::select(const SelectStatement *statement) {
