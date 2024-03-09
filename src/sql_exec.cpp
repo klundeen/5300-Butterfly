@@ -198,10 +198,10 @@ QueryResult* SQLExec::del(const DeleteStatement* statement) {
         table.del(handle);
     }
 
-    string output =  "successfully deleted " + to_string(handles->size()) + " rows";
+    string output =  "successfully deleted " + to_string(handles->size()) + " rows from " + table_name;
     if (indices.size() != 0) 
     {
-        output += " from " + table_name + " and " + to_string(indices.size()) + " indices";
+        output += " and " + to_string(indices.size()) + " indices";
     } 
     delete plan;
     delete handles;
