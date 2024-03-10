@@ -157,8 +157,8 @@ QueryResult *SQLExec::select(const SelectStatement *statement) {
     string table_name = statement->fromTable->name;
     DbRelation &table = tables->get_table(table_name); // prefer polymorphism
 
-    ColumnNames *column_names = new ColumnNames();
-    ColumnAttributes *column_attributes = new ColumnAttributes();
+    ColumnNames *column_names = new ColumnNames(table.get_column_names());
+    ColumnAttributes *column_attributes = new ColumnAttributes(table.get_column_attributes());
 
     EvalPlan *plan = new EvalPlan(table);
     if (statement->whereClause) {
@@ -174,14 +174,6 @@ QueryResult *SQLExec::select(const SelectStatement *statement) {
 
     EvalPlan *optimized = plan->optimize();
     ValueDicts *rows = optimized->evaluate();
-
-    if (rows->size()) {
-        ValueDict *row = (*rows)[0]; // use one row to get column info
-        for (auto item : *row) {
-            column_names->push_back(item.first);
-            column_attributes->push_back(item.second.data_type);
-        }
-    }
 
     return new QueryResult(column_names, column_attributes, rows, "successfully returned " + to_string(rows->size()) + " rows\n");
 }
@@ -459,17 +451,23 @@ void parse_where_clause(const hsql::Expr *node, ValueDict &c) {
 }
 
 ValueDict *SQLExec::get_where_conjunction(const hsql::Expr *where_clause, const ColumnNames &column_names, const ColumnAttributes &column_attribs) {
+    // build a hashmap so we know which column_attribute belongs to a column_name.
+    std::unordered_map<Identifier, ColumnAttribute> col_def; // column_definition
+    for (int i = 0; i < column_names.size(); i++) {
+        col_def[column_names[i]] = column_attribs[i];
+    }
+
     ValueDict *conjunction = new ValueDict();
     parse_where_clause(where_clause, *conjunction);
-    int i = 0;
-    for (auto item: *conjunction) {
-        if (find(column_names.begin(), column_names.end(), item.first) == column_names.end()) {
+    for (auto item: *conjunction) { 
+        // verify that each (column_name, value) in the conjunction exists in target table's column definition
+        auto col_it = col_def.find(item.first);
+        if (col_it == col_def.end()) {
             throw SQLExecError("Could not find column " + item.first);
         }
-        if (column_attribs[i].get_data_type() != item.second.data_type) {
-            throw SQLExecError("Column data type does not match " + item.first + " datatype does not match");
+        if (col_def[item.first].get_data_type() != item.second.data_type) {
+            throw SQLExecError("Column: " + item.first + "'s data type does not match expected datatype");
         }
-        i++;
     }
     return conjunction;
 }

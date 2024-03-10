@@ -9,6 +9,7 @@
 
 #include <exception>
 #include <string>
+#include <unordered_map>
 #include "SQLParser.h"
 #include "schema_tables.h"
 #include "EvalPlan.h"
