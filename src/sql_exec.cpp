@@ -170,6 +170,7 @@ QueryResult *SQLExec::select(const SelectStatement *statement) {
 
         ColumnNames *projection = get_select_projection(statement->selectList, table.get_column_names());
         plan = new EvalPlan(projection, plan);
+        column_names = projection;
     }
 
     EvalPlan *optimized = plan->optimize();
