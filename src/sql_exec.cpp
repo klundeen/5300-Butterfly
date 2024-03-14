@@ -223,10 +223,13 @@ QueryResult *SQLExec::select(const SelectStatement *statement) {
     }
 
     if (statement->selectList && statement->selectList->size()) {
-
-        ColumnNames *projection = get_select_projection(statement->selectList, table.get_column_names());
-        plan = new EvalPlan(projection, plan);
-        column_names = projection;
+        if (statement->selectList->at(0)->type != kExprStar) {
+            ColumnNames *projection = get_select_projection(statement->selectList, table.get_column_names());
+            plan = new EvalPlan(projection, plan);
+            column_names = projection;
+        } else {
+            plan = new EvalPlan(EvalPlan::ProjectAll, plan);
+        }
     }
 
     EvalPlan *optimized = plan->optimize();
