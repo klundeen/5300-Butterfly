@@ -433,40 +433,46 @@ QueryResult *SQLExec::create_table(const CreateStatement *statement) {
     return new QueryResult("created " + string(statement->tableName) + "\n");
 }
 
+// Use Professor's create_index
 QueryResult *SQLExec::create_index(const CreateStatement *statement) {
-    if (statement->indexType && string(statement->indexType) != "BTREE" &&
-        string(statement->indexType) != "HASH")
-        throw SQLExecError("Unsupported index type " + string(statement->indexType));
+    Identifier index_name = statement->indexName;
+    Identifier table_name = statement->tableName;
 
-    string indexType = statement->indexType ? string(statement->indexType) : "BTREE";
+    // get underlying relation
+    DbRelation &table = SQLExec::tables->get_table(table_name);
 
-    int seq = 1;
-    bool isUnique = true;
-    vector<ValueDict> rows;
-    for (char *const columnName : *statement->indexColumns) {
-        ValueDict col_row;
-        col_row[TABLE_NAME_COLUMN] = Value(statement->tableName);
-        col_row[INDEX_NAME_COLUMN] = Value(statement->indexName);
-        col_row[COLUMN_NAME_COLUMN] = Value(columnName);
-        col_row[SEQ_IN_INDEX_COLUMN] = Value(seq++);
-        col_row[INDEX_TYPE_COLUMN] = Value(indexType);
-        col_row[IS_UNIQUE_COLUMN] = Value(isUnique);
-        rows.push_back(col_row);
+    // check that given columns exist in table
+    const ColumnNames &table_columns = table.get_column_names();
+    for (auto const &col_name: *statement->indexColumns)
+        if (find(table_columns.begin(), table_columns.end(), col_name) == table_columns.end())
+            throw SQLExecError(string("Column '") + col_name + "' does not exist in " + table_name);
+
+    // insert a row for every column in index into _indices
+    ValueDict row;
+    row["table_name"] = Value(table_name);
+    row["index_name"] = Value(index_name);
+    row["index_type"] = Value(statement->indexType);
+    row["is_unique"] = Value(string(statement->indexType) == "BTREE"); // assume HASH is non-unique --
+    int seq = 0;
+    Handles i_handles;
+    try {
+        for (auto const &col_name: *statement->indexColumns) {
+            row["seq_in_index"] = Value(++seq);
+            row["column_name"] = Value(col_name);
+            i_handles.push_back(SQLExec::indices->insert(&row));
+        }
+
+        DbIndex &index = SQLExec::indices->get_index(table_name, index_name);
+        index.create();
+
+    } catch (...) {
+        // attempt to remove from _indices
+        try {  // if any exception happens in the reversal below, we still want to re-throw the original ex
+            for (auto const &handle: i_handles)
+                SQLExec::indices->del(handle);
+        } catch (...) {}
+        throw;  // re-throw the original exception (which should give the client some clue as to why it did
     }
- 
-    Columns *columns = dynamic_cast<Columns *>(&tables->get_table(Columns::TABLE_NAME));
-    // check if columns exist
-    for (auto &row : rows) {
-        ValueDict where;
-        where[COLUMN_NAME_COLUMN] = row[COLUMN_NAME_COLUMN];
-        Handles * handles = columns->select(&where);
-        int size = handles->size();
-        delete handles;
-        if (size == 0)
-            throw SQLExecError("Column " + row[COLUMN_NAME_COLUMN].s + " does not exist");
-    }
-
-    for (auto &row : rows) indices->insert(&row);
 
     return new QueryResult("created index " + string(statement->indexName) + "\n");
 }
